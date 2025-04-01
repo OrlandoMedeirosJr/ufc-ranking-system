@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Lutador {
+  id            Int       @id @default(autoincrement())
+  nome          String
+  pais          String
+  sexo          String    @default("Masculino")
+  lutas1        Luta[]    @relation("Lutador1")
+  lutas2        Luta[]    @relation("Lutador2")
+  lutasVencidas Luta[]    @relation("LutadorVencedor")
+  rankings      Ranking[]
+  createdAt     DateTime  @default(now())
+  recordes      Recorde[]
+}
+
+model Luta {
+  id            Int      @id @default(autoincrement())
+  eventoId      Int
+  lutador1Id    Int
+  lutador2Id    Int
+  vencedorId    Int?
+  metodoVitoria String?
+  round         Int?
+  disputaTitulo Boolean  @default(false)
+  bonus         String? // valores separados por vírgula
+  categoria     String
+  noContest     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  evento   Evento   @relation(fields: [eventoId], references: [id])
+  lutador1 Lutador  @relation("Lutador1", fields: [lutador1Id], references: [id])
+  lutador2 Lutador  @relation("Lutador2", fields: [lutador2Id], references: [id])
+  vencedor Lutador? @relation("LutadorVencedor", fields: [vencedorId], references: [id])
+}
+
+model Ranking {
+  id         Int      @id @default(autoincrement())
+  categoria  String
+  posicao    Int
+  pontos     Int
+  corFundo   String
+  variacao   Int      @default(0)
+  lutadorId  Int
+  lutador    Lutador  @relation(fields: [lutadorId], references: [id])
+}
+
+model Evento {
+  id           Int      @id @default(autoincrement())
+  nome         String
+  local        String?
+  cidadeEstado String?
+  data         DateTime
+  publicoTotal Int?
+  arrecadacao  Float?
+  payPerView   Int?
+  finalizado   Boolean  @default(false)
+  lutas        Luta[]
+}
+
+model Recorde {
+  id           Int      @id @default(autoincrement())
+  tipo         String   @unique
+  valor        Int
+  lutadorId    Int
+  lutador      Lutador  @relation(fields: [lutadorId], references: [id])
+  atualizadoEm DateTime @default(now()) @updatedAt
+}

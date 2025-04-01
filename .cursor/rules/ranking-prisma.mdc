@@ -1,0 +1,89 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# 🧠 UFC Ranking System – Project Rules
+
+## 🔧 Projeto
+
+- **Nome:** UFC Ranking System  
+- **Stack:** NestJS + Prisma + PostgreSQL (backend) | Next.js (App Router) + Tailwind + ShadCN (frontend)  
+- **Objetivo:** Sistema completo para rankear lutadores do UFC com base em eventos, lutas e regras de pontuação.
+
+## 🧠 Lógica de Pontuação (resumida)
+
+- Vitória: +3  
+- Vitória por Nocaute/Finalização no 1º ao 5º round: +5 a +1  
+- Vitória por Decisão: Unânime +2 / Dividida +1  
+- Vitória por Desclassificação ou Empate: +1  
+- Vitória em luta de título: +3  
+- Derrota por nocaute/finalização: -5  
+- Derrota por decisão unânime/dividida: -3 / -2  
+- Derrota por desclassificação: -2  
+- Derrota em luta de título: -2  
+- No Contest: contabiliza a luta mas não soma ponto  
+- Bônus: Performance da Noite ou Luta da Noite: +1 cada  
+- Sequência de Vitórias/Derrotas: de +1 a +4 ou -1 a -4 (dependendo da quantidade)  
+- Critérios de desempate: menos derrotas > vitórias por título > 1º round > 2º round > 3º round > bônus
+
+## 🏆 Rankings
+
+- **Ranking Peso por Peso** (todos os lutadores juntos, independente da categoria/sexo)  
+- Rankings por categoria (masculino e feminino)  
+- Lutas em **Peso Casado** contam apenas para o ranking peso por peso  
+- Exibem apenas **15 primeiros** por categoria  
+- Todos os lutadores aparecem com sua posição no ranking da **categoria atual** e **peso por peso**
+
+## 🎨 Cores de Destaque
+
+- 🟤 Dourado Escuro: 1º lugar em qualquer ranking com no mínimo 10 lutas (fundo fixo para sempre)  
+- 🟡 Dourado Claro: 2º ao 5º no peso por peso  
+- 🔵 Azul Escuro: 6º ao 15º no peso por peso + 2º ao 5º nas demais categorias  
+- 🔵 Azul Claro: 6º ao 15º nas demais categorias  
+
+## 📊 Recordes
+
+- Recordes monitorados:
+  - Mais lutas
+  - Mais vitórias
+  - Mais derrotas
+  - Mais nocautes
+  - Mais finalizações
+  - Mais vitórias por decisão
+  - Mais bônus da noite
+- Mostrados em `/recordes`
+- Quando um recorde for quebrado, aparece ao final da finalização de evento
+
+## ⚙️ Backend (NestJS)
+
+- CRUD de lutadores, eventos e lutas  
+- Finalizar evento atualiza o ranking e verifica recordes  
+- Edição de lutas reverte a pontuação e recalcula ranking  
+- Endpoint para obter estatísticas individuais do lutador  
+- Seed massivo com dezenas de lutadores, eventos e lutas  
+
+## 💻 Frontend (Next.js App Router)
+
+- Página principal redireciona para `/ranking/peso-por-peso`  
+- Páginas:
+  - `/ranking/[categoria]`: mostra ranking por categoria
+  - `/recordes`: mostra os recordes atuais
+  - `/lutadores`: lista todos os lutadores cadastrados
+- Navbar fixa  
+- Estilo com Tailwind + ShadCN  
+- Layout com fonte Geist  
+- Integração direta com a API do backend (localhost:3001)
+
+## 🔍 Melhorias em Progresso
+
+- Modal com estatísticas do lutador (ao clicar no nome no ranking)  
+- Filtro de busca de lutadores (por nome, país, sexo)  
+- Variação de ranking (⬆️⬇️ comparando posições anteriores)  
+- Design responsivo  
+- Animações com Framer Motion (opcional)
+
+## ⚠️ Observações
+
+- O sistema roda o backend em **localhost:3001** e o frontend em **localhost:3000** (ou 3001, se o 3000 estiver em uso)  
+- Todas as mudanças em lutas ou eventos devem **forçar atualização do ranking**
