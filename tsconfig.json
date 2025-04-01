@@ -21,5 +21,6 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "moduleResolution": "node"
-  }
+  },
+  "exclude": ["ufc-ranking-front", "node_modules", "dist"]
 }
