@@ -17,49 +17,41 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
   }
   
   async onModuleInit() {
+    this.logger.log('Inicializando conexão com o Prisma...');
     try {
-      this.logger.log('Tentando conectar ao Prisma...');
-      this.logger.log(`URL do banco de dados: ${process.env.DATABASE_URL ? 'definida' : 'não definida'}`);
+      this.logger.log(`Tentando conectar ao banco de dados com URL: ${this.getDatabaseUrl()}`);
       await this.$connect();
-      this.logger.log('Prisma conectado com sucesso');
+      this.logger.log('Conexão com o banco de dados estabelecida com sucesso via Prisma');
     } catch (error) {
-      this.logger.error(`Erro ao conectar ao banco de dados: ${error.message}`, error.stack);
-      
-      // Tentar extrair informações do erro
-      if (error.meta) {
-        this.logger.error(`Metadados do erro: ${JSON.stringify(error.meta)}`);
-      }
-      
-      // Esperar 5 segundos e tentar reconectar
-      this.logger.log('Tentando reconectar em 5 segundos...');
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      try {
-        await this.$connect();
-        this.logger.log('Reconexão bem-sucedida!');
-      } catch (retryError) {
-        this.logger.error(`Falha na tentativa de reconexão: ${retryError.message}`);
-        process.exit(1);
-      }
+      this.logger.error(`Erro ao conectar ao banco de dados via Prisma: ${error.message}`, error.stack);
+      throw error;
     }
   }
 
   async enableShutdownHooks(app: INestApplication) {
-    process.on('beforeExit', async () => {
-      this.logger.log('Desconectando Prisma antes de encerrar...');
-      await this.$disconnect();
-      await app.close();
-    });
+    this.logger.log('Configurando hooks de desligamento...');
+    try {
+      process.on('beforeExit', async () => {
+        this.logger.log('Prisma está encerrando a conexão...');
+        await app.close();
+        this.logger.log('Aplicação fechada com sucesso');
+      });
+      this.logger.log('Hooks de desligamento configurados com sucesso');
+    } catch (error) {
+      this.logger.error(`Erro ao configurar hooks de desligamento: ${error.message}`, error.stack);
+    }
+  }
+
+  // Método helper para verificar a URL do banco de dados (ocultando credenciais)
+  private getDatabaseUrl(): string {
+    const url = process.env.DATABASE_URL || '';
+    if (!url) return 'URL do banco de dados não definida';
     
-    process.on('SIGINT', async () => {
-      this.logger.log('Recebido SIGINT, encerrando aplicação graciosamente...');
-      await this.$disconnect();
-      process.exit(0);
-    });
-    
-    process.on('SIGTERM', async () => {
-      this.logger.log('Recebido SIGTERM, encerrando aplicação graciosamente...');
-      await this.$disconnect();
-      process.exit(0);
-    });
+    try {
+      const parsedUrl = new URL(url);
+      return `${parsedUrl.protocol}//${parsedUrl.host}${parsedUrl.pathname}`;
+    } catch {
+      return 'URL do banco de dados inválida';
+    }
   }
 }
