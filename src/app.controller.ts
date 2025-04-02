@@ -15,6 +15,14 @@ export class AppController {
   }
 
   @Get('health')
+  health() {
+    return {
+      status: 'ok',
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  @Get('health-db')
   async healthCheck() {
     // Verifica se o banco de dados está acessível
     try {
