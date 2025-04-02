@@ -9,7 +9,7 @@
     "build": "nest build",
     "start:dev": "nest start --watch",
     "start": "nest start",
-    "start:prod": "node dist/main",
+    "start:prod": "node dist/main.js",
     "postinstall": "prisma generate",
     "railway": "npm run build && npx prisma generate && npx prisma migrate deploy && npm run start:prod",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",

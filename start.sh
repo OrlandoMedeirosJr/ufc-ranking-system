@@ -6,9 +6,8 @@ echo "🚀 Iniciando processo de deploy..."
 echo "🔍 Verificando ambiente..."
 echo "Node version: $(node -v)"
 echo "NPM version: $(npm -v)"
-echo "PATH: $PATH"
-pwd
-ls -la
+echo "Current directory: $(pwd)"
+echo "List files: $(ls -la)"
 
 # Verificando scripts disponíveis
 echo "🔍 Scripts disponíveis no package.json:"
@@ -43,8 +42,42 @@ fi
 
 # Verificando a estrutura de arquivos dist
 echo "🔍 Verificando a estrutura de arquivos compilados:"
+mkdir -p dist
 ls -la dist/
+DIST_FILES=$(find dist -type f | wc -l)
+echo "Total de arquivos em dist/: $DIST_FILES"
+
+if [ $DIST_FILES -eq 0 ]; then
+  echo "⚠️ Pasta dist vazia após build. Executando build novamente com parâmetros diferentes..."
+  npm run build -- --copy-files
+  mkdir -p dist
+  ls -la dist/
+fi
+
+# Procurar o arquivo main em diferentes locais
+MAIN_FILE=""
+if [ -f "dist/main.js" ]; then
+  MAIN_FILE="dist/main.js"
+  echo "✅ Encontrado arquivo main.js"
+elif [ -f "dist/main" ]; then
+  MAIN_FILE="dist/main"
+  echo "✅ Encontrado arquivo main sem extensão"
+elif [ -f "dist/src/main.js" ]; then
+  MAIN_FILE="dist/src/main.js"
+  echo "✅ Encontrado arquivo main.js em dist/src"
+elif [ -f "dist/src/main" ]; then
+  MAIN_FILE="dist/src/main"
+  echo "✅ Encontrado arquivo main sem extensão em dist/src"
+else
+  echo "❌ Arquivo main não encontrado. Procurando em toda a estrutura do projeto:"
+  find . -name "main*"
+fi
 
 # Iniciar a aplicação
-echo "🚀 Iniciando a aplicação..."
-node dist/main 
+if [ -n "$MAIN_FILE" ]; then
+  echo "🚀 Iniciando a aplicação com: node $MAIN_FILE"
+  node $MAIN_FILE
+else
+  echo "❌ Arquivo main não encontrado. Tentando iniciar com o script padrão npm start:prod"
+  npm run start:prod
+fi 
