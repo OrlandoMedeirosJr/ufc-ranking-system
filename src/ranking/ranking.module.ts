@@ -7,5 +7,6 @@ import { PrismaModule } from '../prisma/prisma.module';
   imports: [PrismaModule],
   controllers: [RankingController],
   providers: [RankingService],
+  exports: [RankingService],
 })
 export class RankingModule {}

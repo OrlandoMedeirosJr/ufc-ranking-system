@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { RecordeService } from './recorde.service';
 import { RecordeController } from './recorde.controller';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
+  imports: [PrismaModule],
   controllers: [RecordeController],
-  providers: [RecordeService, PrismaService],
+  providers: [RecordeService],
   exports: [RecordeService],
 })
 export class RecordeModule {}
