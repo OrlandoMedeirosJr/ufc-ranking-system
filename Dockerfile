@@ -1,10 +1,16 @@
-FROM node:18-alpine
+FROM node:18
 
 WORKDIR /app
 
+# Instalar ferramentas de build necessárias
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    python3 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copiar package.json e instalar dependências
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 # Copiar o resto dos arquivos
 COPY . .
