@@ -47,4 +47,4 @@ ls -la dist/
 
 # Iniciar a aplicação
 echo "🚀 Iniciando a aplicação..."
-node dist/main.js 
+node dist/main 
