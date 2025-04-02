@@ -7,6 +7,10 @@ import { Logger } from '@nestjs/common';
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
   try {
+    logger.log('Iniciando a aplicação...');
+    logger.log(`Diretório atual: ${process.cwd()}`);
+    logger.log(`Variáveis de ambiente: DATABASE_URL=${process.env.DATABASE_URL ? 'definido' : 'não definido'}`);
+    
     const app = await NestFactory.create(AppModule);
     
     // Habilitar CORS para permitir solicitações do frontend
@@ -17,6 +21,7 @@ async function bootstrap() {
     });
     
     // Testar a conexão com o banco de dados
+    logger.log('Tentando conectar ao banco de dados...');
     const prismaService = app.get(PrismaService);
     await prismaService.$connect();
     // Configurar os shutdown hooks do Prisma
@@ -26,6 +31,7 @@ async function bootstrap() {
     // Configurar o encerramento limpo
     const port = process.env.PORT || 3000;
     // Alterar host para 0.0.0.0 para permitir acesso externo na nuvem
+    logger.log(`Iniciando servidor na porta ${port}...`);
     await app.listen(port, '0.0.0.0');
     logger.log(`Aplicação iniciada na porta ${port}`);
   } catch (error) {
