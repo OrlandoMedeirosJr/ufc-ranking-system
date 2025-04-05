@@ -16,6 +16,7 @@ async function main() {
         nome: `Lutador ${i}`,
         pais: paises[i % paises.length],
         sexo: sexos[i % sexos.length],
+        altura: 1.7 + (Math.random() * 0.3),
       },
     });
   }
@@ -26,11 +27,8 @@ async function main() {
       data: {
         nome: `UFC ${280 + e}`,
         local: 'Arena XYZ',
-        cidadeEstado: 'Cidade YZ',
+        pais: paises[e % paises.length],
         data: new Date(2025, e % 12, (e % 28) + 1),
-        publicoTotal: 15000 + e * 100,
-        arrecadacao: 2000000 + e * 50000,
-        payPerView: 800000 + e * 25000,
         finalizado: true
       }
     });

@@ -1,17 +1,74 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Param, Query, Res, Logger } from '@nestjs/common';
 import { AppService } from './app.service';
 import { PrismaService } from './prisma/prisma.service';
+import { Response } from 'express';
 
 @Controller()
 export class AppController {
+  private readonly logger = new Logger(AppController.name);
+  
   constructor(
     private readonly appService: AppService,
-    private readonly prismaService: PrismaService
+    private readonly prisma: PrismaService,
   ) {}
 
   @Get()
   getHello(): string {
     return this.appService.getHello();
+  }
+
+  @Get('system-info')
+  getSystemInfo(): object {
+    return {
+      version: '1.0.0',
+      status: 'online',
+      environment: process.env.NODE_ENV || 'development',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('lutadores-list')
+  async getLutadores() {
+    this.logger.log('Chamando endpoint lutadores-list');
+    try {
+      const lutadores = await this.prisma.lutador.findMany({
+        orderBy: { nome: 'asc' },
+      });
+      this.logger.log(`Retornando ${lutadores.length} lutadores`);
+      return lutadores;
+    } catch (error) {
+      this.logger.error(`Erro ao listar lutadores: ${error.message}`, error.stack);
+      return { error: 'Erro ao listar lutadores', message: error.message };
+    }
+  }
+
+  @Get('all-endpoints')
+  getAllEndpoints(@Res() res: Response) {
+    const routes = [
+      { path: '/', method: 'GET', description: 'Página inicial' },
+      {
+        path: '/system-info',
+        method: 'GET',
+        description: 'Informações do sistema',
+      },
+      {
+        path: '/ranking/:categoria',
+        method: 'GET',
+        description: 'Obter ranking por categoria',
+      },
+      {
+        path: '/lutadores-list',
+        method: 'GET',
+        description: 'Listar todos os lutadores',
+      },
+      {
+        path: '/lutadores',
+        method: 'GET',
+        description: 'Listar todos os lutadores (endpoint oficial)',
+      },
+    ];
+
+    return res.json(routes);
   }
 
   @Get('health')
@@ -26,7 +83,7 @@ export class AppController {
   async healthCheck() {
     // Verifica se o banco de dados está acessível
     try {
-      await this.prismaService.$queryRaw`SELECT 1`;
+      await this.prisma.$queryRaw`SELECT 1`;
       return {
         status: 'ok',
         timestamp: new Date().toISOString(),

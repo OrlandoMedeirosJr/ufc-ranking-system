@@ -72,18 +72,4 @@ alwaysApply: true
   - `/lutadores`: lista todos os lutadores cadastrados
 - Navbar fixa  
 - Estilo com Tailwind + ShadCN  
-- Layout com fonte Geist  
-- Integração direta com a API do backend (localhost:3001)
-
-## 🔍 Melhorias em Progresso
-
-- Modal com estatísticas do lutador (ao clicar no nome no ranking)  
-- Filtro de busca de lutadores (por nome, país, sexo)  
-- Variação de ranking (⬆️⬇️ comparando posições anteriores)  
-- Design responsivo  
-- Animações com Framer Motion (opcional)
-
-## ⚠️ Observações
-
-- O sistema roda o backend em **localhost:3001** e o frontend em **localhost:3000** (ou 3001, se o 3000 estiver em uso)  
-- Todas as mudanças em lutas ou eventos devem **forçar atualização do ranking**
+- Layout com fonte Geist

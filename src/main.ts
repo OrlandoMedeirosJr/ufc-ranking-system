@@ -37,7 +37,7 @@ async function bootstrap() {
     }
     
     // Configurar o encerramento limpo
-    const port = process.env.PORT || 3000;
+    const port = process.env.PORT || 3333;
     // Alterar host para 0.0.0.0 para permitir acesso externo na nuvem
     logger.log(`Iniciando servidor na porta ${port} no host 0.0.0.0...`);
     await app.listen(port, '0.0.0.0');

@@ -56,13 +56,15 @@ export class RankingService {
         streakVitorias++;
         streakDerrotas = 0;
       } else if (perdeu) {
-        if (isTitulo) pontos -= 2;
-
-        if (metodo === 'nocaute') pontos -= 5;
-        else if (metodo === 'finalização') pontos -= 5;
-        else if (metodo.includes('decisão unânime')) pontos -= 3;
-        else if (metodo.includes('decisão dividida')) pontos -= 2;
-        else if (metodo.includes('desclassificação')) pontos -= 2;
+        if (isTitulo) {
+          pontos -= 2;
+        } else {
+          if (metodo === 'nocaute') pontos -= 5;
+          else if (metodo === 'finalização') pontos -= 5;
+          else if (metodo.includes('decisão unânime')) pontos -= 3;
+          else if (metodo.includes('decisão dividida')) pontos -= 2;
+          else if (metodo.includes('desclassificação')) pontos -= 2;
+        }
 
         derrotas++;
         streakDerrotas++;
@@ -74,12 +76,14 @@ export class RankingService {
       }
 
       if (luta.bonus) {
-        const bonusList = luta.bonus.split(',').map((b) => b.trim());
-        if (bonusList.includes('performance')) {
-          pontos += 1;
-          bonusTotal++;
+        if (luta.bonus === 'Performance da Noite') {
+          if (venceu) {
+            pontos += 1;
+            bonusTotal++;
+          }
         }
-        if (bonusList.includes('luta da noite')) {
+        
+        if (luta.bonus === 'Luta da Noite') {
           pontos += 1;
           bonusTotal++;
         }
@@ -112,6 +116,20 @@ export class RankingService {
     const rankingAnterior = await this.prisma.ranking.findMany();
     const rankingMap: Record<string, any[]> = {};
 
+    // Armazenar o número total de lutas por lutador
+    const lutasMap: Record<number, number> = {};
+    
+    // Pré-carregar o número de lutas para cada lutador
+    for (const lutador of lutadores) {
+      const totalLutas = await this.prisma.luta.count({
+        where: {
+          OR: [{ lutador1Id: lutador.id }, { lutador2Id: lutador.id }],
+          noContest: false
+        }
+      });
+      lutasMap[lutador.id] = totalLutas;
+    }
+
     for (const lutador of lutadores) {
       const resultado = await this.calcularPontuacaoLutador(lutador.id);
 
@@ -131,6 +149,7 @@ export class RankingService {
         rankingMap[categoria].push({
           lutadorId: lutador.id,
           nome: lutador.nome,
+          totalLutas: lutasMap[lutador.id],
           ...resultado,
         });
       }
@@ -139,6 +158,7 @@ export class RankingService {
       rankingMap['Peso por Peso'].push({
         lutadorId: lutador.id,
         nome: lutador.nome,
+        totalLutas: lutasMap[lutador.id],
         ...resultado,
       });
     }
@@ -166,8 +186,10 @@ export class RankingService {
         const posicao = i + 1;
 
         let cor = '';
-        if (posicao === 1) cor = 'dourado-escuro';
-        else if (categoria === 'Peso por Peso' && posicao >= 2 && posicao <= 5)
+        // Aplicar cor dourado-escuro apenas se for primeiro colocado E tiver pelo menos 10 lutas
+        if (posicao === 1 && entry.totalLutas >= 10) cor = 'dourado-escuro';
+        // Primeiro colocado com menos de 10 lutas ou posições 2-5 no ranking Peso por Peso recebem dourado-claro
+        else if ((posicao === 1 && entry.totalLutas < 10) || (categoria === 'Peso por Peso' && posicao >= 2 && posicao <= 5))
           cor = 'dourado-claro';
         else if (categoria === 'Peso por Peso' && posicao >= 6 && posicao <= 15)
           cor = 'azul-escuro';
