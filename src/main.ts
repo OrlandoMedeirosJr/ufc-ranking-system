@@ -1,7 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { PrismaService } from './prisma/prisma.service';
-import { Logger } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 // src/main.ts
 async function bootstrap() {
@@ -15,13 +16,39 @@ async function bootstrap() {
       logger: ['error', 'warn', 'log', 'debug', 'verbose'],
     });
     
-    // Habilitar CORS para permitir solicitações do frontend
+    // Configurar CORS para desenvolvimento
     logger.log('Configurando CORS...');
     app.enableCors({
-      origin: true, // Permitir qualquer origem
+      origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003', 'http://localhost:3004'],
       methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
       credentials: true,
     });
+    
+    // Validação global
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        transform: true,
+        forbidNonWhitelisted: true,
+        transformOptions: {
+          enableImplicitConversion: true,
+        },
+      }),
+    );
+    
+    // Configuração do Swagger
+    const config = new DocumentBuilder()
+      .setTitle('UFC Ranking System API')
+      .setDescription('API para o sistema de ranking do UFC')
+      .setVersion('1.0')
+      .addTag('lutadores')
+      .addTag('eventos')
+      .addTag('lutas')
+      .addTag('ranking')
+      .build();
+    
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api', app, document);
     
     // Testar a conexão com o banco de dados
     logger.log('Tentando conectar ao banco de dados...');
@@ -42,6 +69,7 @@ async function bootstrap() {
     logger.log(`Iniciando servidor na porta ${port} no host 0.0.0.0...`);
     await app.listen(port, '0.0.0.0');
     logger.log(`Aplicação iniciada na porta ${port}`);
+    logger.log(`Swagger disponível em http://localhost:${port}/api`);
   } catch (error) {
     logger.error(`Erro ao inicializar o servidor: ${error.message}`, error.stack);
     process.exit(1);

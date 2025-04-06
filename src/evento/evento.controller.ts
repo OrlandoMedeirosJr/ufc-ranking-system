@@ -10,7 +10,8 @@ import {
   ValidationPipe,
   Logger,
   HttpException,
-  HttpStatus
+  HttpStatus,
+  NotFoundException
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventoService } from './evento.service';
@@ -79,8 +80,11 @@ export class EventoController {
   @Get(':id')
   async obterEvento(@Param('id') id: string) {
     try {
+      const eventoId = parseInt(id);
+      this.logger.log(`Buscando evento com ID: ${eventoId}`);
+      
       const evento = await this.prisma.evento.findUnique({
-        where: { id: Number(id) },
+        where: { id: eventoId },
         include: {
           lutas: {
             include: {
@@ -93,34 +97,52 @@ export class EventoController {
       });
       
       if (!evento) {
-        return { error: 'Evento não encontrado', statusCode: 404 };
+        this.logger.warn(`Evento ID ${eventoId} não encontrado`);
+        throw new NotFoundException(`Evento com ID ${eventoId} não encontrado`);
       }
       
-      // Mapear as lutas para o formato esperado pelo frontend
+      // Formatar para o frontend
       const eventoFormatado = {
         ...evento,
-        lutas: evento.lutas.map((luta) => ({
-          id: luta.id,
-          eventoId: luta.eventoId,
-          lutadorA: luta.lutador1,
-          lutadorB: luta.lutador2,
-          categoria: luta.categoria,
-          resultado: luta.vencedorId ? {
+        lutas: evento.lutas.map((luta: any) => {
+          // Processar os bônus
+          let bonusLuta = false;
+          let bonusPerformance = false;
+          
+          if (luta.bonus) {
+            // Verificar se há múltiplos bônus separados por vírgula
+            const bonusArray = luta.bonus.split(',');
+            bonusLuta = bonusArray.includes('Luta da Noite');
+            bonusPerformance = bonusArray.includes('Performance da Noite');
+          }
+          
+          // Verificar se a luta tem resultado (vencedor, empate ou no contest)
+          const temResultado = luta.vencedorId !== null || luta.empate || luta.noContest;
+          
+          return {
             id: luta.id,
-            vencedor: luta.vencedorId === luta.lutador1Id ? 'lutadorA' : 
-                      luta.vencedorId === luta.lutador2Id ? 'lutadorB' : 
-                      luta.noContest ? 'nocontest' : 'empate',
-            metodo: luta.metodoVitoria,
-            round: luta.round,
-            tempo: luta.tempo,
-            titulo: luta.disputaTitulo,
-            bonusLuta: luta.bonus === 'Luta da Noite',
-            bonusPerformance: luta.bonus === 'Performance da Noite'
-          } : undefined
-        }))
+            eventoId: luta.eventoId,
+            lutadorA: luta.lutador1,
+            lutadorB: luta.lutador2,
+            categoria: luta.categoria,
+            disputaTitulo: luta.disputaTitulo,
+            resultado: temResultado ? {
+              id: luta.id,
+              vencedor: luta.vencedorId === luta.lutador1Id ? 'lutadorA' : 
+                        luta.vencedorId === luta.lutador2Id ? 'lutadorB' : 
+                        luta.noContest ? 'nocontest' : 'empate',
+              metodo: luta.metodoVitoria,
+              round: luta.round,
+              tempo: luta.tempo,
+              titulo: luta.disputaTitulo,
+              bonusLuta,
+              bonusPerformance
+            } : undefined
+          };
+        })
       };
       
-      this.logger.log(`Evento formatado para frontend: ${JSON.stringify(eventoFormatado.id)}`);
+      this.logger.log(`Evento formatado para frontend: ${eventoFormatado.id}`);
       return eventoFormatado;
     } catch (error) {
       this.logger.error(`Erro ao obter evento: ${error.message}`);
@@ -155,9 +177,14 @@ export class EventoController {
         this.logger.log(`Processando ${lutas.length} lutas`);
         
         for (const luta of lutas) {
-          // Verificar se os lutadores existem
-          const lutador1 = await this.prisma.lutador.findFirst({ where: { nome: luta.lutador1 } });
-          const lutador2 = await this.prisma.lutador.findFirst({ where: { nome: luta.lutador2 } });
+          // Verificar se os lutadores existem usando findFirst
+          const lutador1 = await this.prisma.lutador.findFirst({ 
+            where: { nome: luta.lutador1 } 
+          });
+          
+          const lutador2 = await this.prisma.lutador.findFirst({ 
+            where: { nome: luta.lutador2 } 
+          });
 
           this.logger.log(`Lutador1: ${lutador1?.nome} (ID: ${lutador1?.id}), Lutador2: ${lutador2?.nome} (ID: ${lutador2?.id})`);
 
@@ -345,8 +372,13 @@ export class EventoController {
           for (const luta of lutasNovas) {
             try {
               // Verificar se os lutadores existem
-              const lutador1 = await this.prisma.lutador.findFirst({ where: { nome: luta.lutadorA.nome } });
-              const lutador2 = await this.prisma.lutador.findFirst({ where: { nome: luta.lutadorB.nome } });
+              const lutador1 = await this.prisma.lutador.findFirst({ 
+                where: { nome: luta.lutadorA.nome } 
+              });
+              
+              const lutador2 = await this.prisma.lutador.findFirst({ 
+                where: { nome: luta.lutadorB.nome } 
+              });
               
               if (!lutador1 || !lutador2) {
                 this.logger.error(`Lutador não encontrado: ${!lutador1 ? luta.lutadorA.nome : luta.lutadorB.nome}`);
@@ -515,8 +547,13 @@ export class EventoController {
       }
       
       // Verificar se os lutadores existem
-      const lutador1 = await this.prisma.lutador.findFirst({ where: { nome: lutaData.lutador1 } });
-      const lutador2 = await this.prisma.lutador.findFirst({ where: { nome: lutaData.lutador2 } });
+      const lutador1 = await this.prisma.lutador.findFirst({ 
+        where: { nome: lutaData.lutador1 } 
+      });
+      
+      const lutador2 = await this.prisma.lutador.findFirst({ 
+        where: { nome: lutaData.lutador2 } 
+      });
       
       if (!lutador1 || !lutador2) {
         return { 

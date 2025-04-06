@@ -76,16 +76,23 @@ export class RankingService {
       }
 
       if (luta.bonus) {
-        if (luta.bonus === 'Performance da Noite') {
-          if (venceu) {
+        // Tratar múltiplos bônus separados por vírgula
+        const bonuses = typeof luta.bonus === 'string' ? 
+                        luta.bonus.split(',').map(b => b.trim()) : 
+                        [luta.bonus];
+        
+        for (const bonus of bonuses) {
+          if (bonus === 'Performance da Noite') {
+            if (venceu) {
+              pontos += 1;
+              bonusTotal++;
+            }
+          }
+          
+          if (bonus === 'Luta da Noite') {
             pontos += 1;
             bonusTotal++;
           }
-        }
-        
-        if (luta.bonus === 'Luta da Noite') {
-          pontos += 1;
-          bonusTotal++;
         }
       }
 
@@ -112,109 +119,110 @@ export class RankingService {
   }
 
   async atualizarTodosOsRankings() {
-    const lutadores = await this.prisma.lutador.findMany();
-    const rankingAnterior = await this.prisma.ranking.findMany();
-    const rankingMap: Record<string, any[]> = {};
+    try {
+      const lutadores = await this.prisma.lutador.findMany();
+      const rankingAnterior = await this.prisma.ranking.findMany();
+      const rankingMap: Record<string, any[]> = {};
 
-    // Armazenar o número total de lutas por lutador
-    const lutasMap: Record<number, number> = {};
-    
-    // Pré-carregar o número de lutas para cada lutador
-    for (const lutador of lutadores) {
-      const totalLutas = await this.prisma.luta.count({
-        where: {
-          OR: [{ lutador1Id: lutador.id }, { lutador2Id: lutador.id }],
-          noContest: false
+      for (const lutador of lutadores) {
+        const resultado = await this.calcularPontuacaoLutador(lutador.id);
+
+        const lutas = await this.prisma.luta.findMany({
+          where: {
+            OR: [{ lutador1Id: lutador.id }, { lutador2Id: lutador.id }],
+            noContest: false,
+          },
+          select: { categoria: true },
+          distinct: ['categoria'],
+        });
+
+        for (const l of lutas) {
+          const categoria = l.categoria;
+          if (!rankingMap[categoria]) rankingMap[categoria] = [];
+
+          rankingMap[categoria].push({
+            lutadorId: lutador.id,
+            nome: lutador.nome,
+            ...resultado,
+          });
         }
-      });
-      lutasMap[lutador.id] = totalLutas;
-    }
 
-    for (const lutador of lutadores) {
-      const resultado = await this.calcularPontuacaoLutador(lutador.id);
-
-      const lutas = await this.prisma.luta.findMany({
-        where: {
-          OR: [{ lutador1Id: lutador.id }, { lutador2Id: lutador.id }],
-          noContest: false,
-        },
-        select: { categoria: true },
-        distinct: ['categoria'],
-      });
-
-      for (const l of lutas) {
-        const categoria = l.categoria;
-        if (!rankingMap[categoria]) rankingMap[categoria] = [];
-
-        rankingMap[categoria].push({
+        if (!rankingMap['Peso por Peso']) rankingMap['Peso por Peso'] = [];
+        rankingMap['Peso por Peso'].push({
           lutadorId: lutador.id,
           nome: lutador.nome,
-          totalLutas: lutasMap[lutador.id],
           ...resultado,
         });
       }
 
-      if (!rankingMap['Peso por Peso']) rankingMap['Peso por Peso'] = [];
-      rankingMap['Peso por Peso'].push({
-        lutadorId: lutador.id,
-        nome: lutador.nome,
-        totalLutas: lutasMap[lutador.id],
-        ...resultado,
-      });
-    }
+      await this.prisma.ranking.deleteMany();
 
-    await this.prisma.ranking.deleteMany();
-
-    for (const [categoria, lutadores] of Object.entries(rankingMap)) {
-      const ordenado = lutadores.sort((a, b) => {
-        if (b.pontos !== a.pontos) return b.pontos - a.pontos;
-        if (a.derrotas !== b.derrotas) return a.derrotas - b.derrotas;
-        if (b.vitoriasTitulo !== a.vitoriasTitulo)
-          return b.vitoriasTitulo - a.vitoriasTitulo;
-        if (b.vitoriasPrimeiroRound !== a.vitoriasPrimeiroRound)
-          return b.vitoriasPrimeiroRound - a.vitoriasPrimeiroRound;
-        if (b.vitoriasSegundoRound !== a.vitoriasSegundoRound)
-          return b.vitoriasSegundoRound - a.vitoriasSegundoRound;
-        if (b.vitoriasTerceiroRound !== a.vitoriasTerceiroRound)
-          return b.vitoriasTerceiroRound - a.vitoriasTerceiroRound;
-        if (b.bonusTotal !== a.bonusTotal) return b.bonusTotal - a.bonusTotal;
-        return 0;
-      });
-
-      for (let i = 0; i < ordenado.length; i++) {
-        const entry = ordenado[i];
-        const posicao = i + 1;
-
-        let cor = '';
-        // Aplicar cor dourado-escuro apenas se for primeiro colocado E tiver pelo menos 10 lutas
-        if (posicao === 1 && entry.totalLutas >= 10) cor = 'dourado-escuro';
-        // Primeiro colocado com menos de 10 lutas ou posições 2-5 no ranking Peso por Peso recebem dourado-claro
-        else if ((posicao === 1 && entry.totalLutas < 10) || (categoria === 'Peso por Peso' && posicao >= 2 && posicao <= 5))
-          cor = 'dourado-claro';
-        else if (categoria === 'Peso por Peso' && posicao >= 6 && posicao <= 15)
-          cor = 'azul-escuro';
-        else if (posicao >= 2 && posicao <= 5) cor = 'azul-escuro';
-        else if (posicao >= 6 && posicao <= 15) cor = 'azul-claro';
-
-        const anterior = rankingAnterior.find(
-          (r) => r.lutadorId === entry.lutadorId && r.categoria === categoria,
-        );
-        const variacao = anterior ? anterior.posicao - posicao : 0;
-
-        await this.prisma.ranking.create({
-          data: {
-            lutadorId: entry.lutadorId,
-            categoria,
-            posicao,
-            pontos: entry.pontos,
-            corFundo: cor,
-            variacao,
-          },
+      for (const [categoria, lutadores] of Object.entries(rankingMap)) {
+        const ordenado = lutadores.sort((a, b) => {
+          if (b.pontos !== a.pontos) return b.pontos - a.pontos;
+          if (a.derrotas !== b.derrotas) return a.derrotas - b.derrotas;
+          if (b.vitoriasTitulo !== a.vitoriasTitulo)
+            return b.vitoriasTitulo - a.vitoriasTitulo;
+          if (b.vitoriasPrimeiroRound !== a.vitoriasPrimeiroRound)
+            return b.vitoriasPrimeiroRound - a.vitoriasPrimeiroRound;
+          if (b.vitoriasSegundoRound !== a.vitoriasSegundoRound)
+            return b.vitoriasSegundoRound - a.vitoriasSegundoRound;
+          if (b.vitoriasTerceiroRound !== a.vitoriasTerceiroRound)
+            return b.vitoriasTerceiroRound - a.vitoriasTerceiroRound;
+          if (b.bonusTotal !== a.bonusTotal) return b.bonusTotal - a.bonusTotal;
+          return 0;
         });
-      }
-    }
 
-    console.log('✅ Ranking atualizado com sucesso.');
+        for (let i = 0; i < ordenado.length; i++) {
+          const entry = ordenado[i];
+          const posicao = i + 1;
+
+          // Contar o número de lutas do lutador
+          const numLutas = await this.prisma.luta.count({
+            where: {
+              OR: [{ lutador1Id: entry.lutadorId }, { lutador2Id: entry.lutadorId }],
+              noContest: false,
+            },
+          });
+
+          let cor = '';
+          if (posicao === 1) {
+            if (numLutas >= 10) {
+              cor = 'dourado-escuro';
+            } else {
+              cor = 'dourado-claro';
+            }
+          }
+          else if (categoria === 'Peso por Peso' && posicao >= 2 && posicao <= 5)
+            cor = 'dourado-claro';
+          else if (categoria === 'Peso por Peso' && posicao >= 6 && posicao <= 15)
+            cor = 'azul-escuro';
+          else if (posicao >= 2 && posicao <= 5) cor = 'azul-escuro';
+          else if (posicao >= 6 && posicao <= 15) cor = 'azul-claro';
+
+          const anterior = rankingAnterior.find(
+            (r) => r.lutadorId === entry.lutadorId && r.categoria === categoria,
+          );
+          const variacao = anterior ? anterior.posicao - posicao : 0;
+
+          await this.prisma.ranking.create({
+            data: {
+              lutadorId: entry.lutadorId,
+              categoria,
+              posicao,
+              pontos: entry.pontos,
+              corFundo: cor,
+              variacao,
+            },
+          });
+        }
+      }
+
+      console.log('✅ Ranking atualizado com sucesso.');
+    } catch (error) {
+      console.error('❌ Erro ao atualizar ranking:', error);
+      throw new Error(`Falha ao atualizar o ranking: ${error.message}`);
+    }
   }
 
   async getRankingPorCategoria(categoria: string) {
