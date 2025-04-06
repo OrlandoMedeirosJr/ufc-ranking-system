@@ -208,6 +208,18 @@ export class EventoController {
             noContest = true;
           }
 
+          // Processar os bônus corretamente
+          let bonusString: string | null = null;
+          if (luta.bonus) {
+            if (Array.isArray(luta.bonus)) {
+              // Se for um array, junte com vírgula
+              bonusString = luta.bonus.length > 0 ? luta.bonus.join(',') : null;
+            } else if (typeof luta.bonus === 'string') {
+              // Se já for string, use diretamente
+              bonusString = luta.bonus;
+            }
+          }
+
           // Usar abordagem mais direta para criar luta
           try {
             // Criar a luta com abordagem simplificada usando dados brutos
@@ -221,7 +233,7 @@ export class EventoController {
                 tempo: luta.tempo || null,
                 metodoVitoria: metodoVitoria,
                 vencedorId: vencedorId,
-                bonus: luta.bonus || null,
+                bonus: bonusString,
                 disputaTitulo: luta.titulo || false,
                 noContest: noContest
               },
@@ -252,86 +264,18 @@ export class EventoController {
           },
         },
       });
-
-      if (eventoCompleto) {
-        this.logger.log(`Evento salvo com sucesso com ${eventoCompleto.lutas.length} lutas`);
-        return { 
-          mensagem: 'Evento e lutas criados com sucesso', 
-          evento: eventoCompleto,
-          lutas: lutasCriadas.length
-        };
-      } else {
-        this.logger.error('Evento criado mas não foi possível recuperá-lo com as lutas');
-        return { 
-          mensagem: 'Evento criado com sucesso, mas houve um problema ao recuperar os detalhes completos',
-          evento: evento,
-          lutas: lutasCriadas.length
-        };
-      }
+      
+      return { 
+        mensagem: 'Evento criado com sucesso', 
+        evento: eventoCompleto 
+      };
     } catch (error) {
       this.logger.error(`Erro ao criar evento: ${error.message}`);
-      
-      // Tratamento específico para erros do Prisma
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        // Erro conhecido do Prisma
-        switch (error.code) {
-          case 'P2002': // Violação de unique constraint
-            return { 
-              error: 'Erro de duplicidade', 
-              statusCode: 400, 
-              detalhes: `Já existe um registro com estes dados: ${error.meta?.target}` 
-            };
-          case 'P2003': // Foreign key constraint failed
-            return { 
-              error: 'Referência inválida', 
-              statusCode: 400, 
-              detalhes: `Referência a registro inexistente: ${error.meta?.field_name}` 
-            };
-          case 'P2025': // Record not found
-            return { 
-              error: 'Registro não encontrado', 
-              statusCode: 404, 
-              detalhes: error.meta?.cause || error.message 
-            };
-          default:
-            return { 
-              error: 'Erro do banco de dados', 
-              statusCode: 400, 
-              detalhes: error.message, 
-              code: error.code 
-            };
-        }
-      } else if (error instanceof Prisma.PrismaClientValidationError) {
-        // Erro de validação do Prisma (formato/tipos incorretos)
-        return { 
-          error: 'Erro de validação', 
-          statusCode: 400, 
-          detalhes: error.message.split('\n').slice(-3).join(' ') // Extrair a parte útil da mensagem
-        };
-      } else if (error instanceof Prisma.PrismaClientRustPanicError) {
-        // Falha crítica no Prisma Engine
-        this.logger.error('Erro crítico no Prisma Engine', error.stack);
-        return { 
-          error: 'Erro crítico no servidor', 
-          statusCode: 500, 
-          detalhes: 'Falha interna no processamento do banco de dados' 
-        };
-      } else if (error instanceof Prisma.PrismaClientInitializationError) {
-        // Erro de inicialização do Prisma
-        this.logger.error('Falha na conexão com o banco de dados', error.stack);
-        return { 
-          error: 'Erro de conexão com o banco de dados', 
-          statusCode: 503, 
-          detalhes: 'Não foi possível conectar ao banco de dados' 
-        };
-      } else {
-        // Erros genéricos
-        return { 
-          error: 'Erro ao criar evento', 
-          statusCode: 500, 
-          detalhes: error.message 
-        };
-      }
+      return { 
+        error: 'Erro ao criar evento', 
+        statusCode: 500, 
+        detalhes: error.message 
+      };
     }
   }
 
@@ -404,6 +348,16 @@ export class EventoController {
                 
                 metodoVitoria = luta.resultado.metodo || null;
               }
+
+              // Processar bônus para garantir que seja uma string ou null
+              let bonusString: string | null = null;
+              if (luta.resultado?.bonusLuta && luta.resultado?.bonusPerformance) {
+                bonusString = 'Luta da Noite,Performance da Noite';
+              } else if (luta.resultado?.bonusLuta) {
+                bonusString = 'Luta da Noite';
+              } else if (luta.resultado?.bonusPerformance) {
+                bonusString = 'Performance da Noite';
+              }
               
               // Criar a luta com os dados recebidos
               await this.prisma.luta.create({
@@ -416,7 +370,7 @@ export class EventoController {
                   tempo: null,
                   metodoVitoria: metodoVitoria,
                   vencedorId: vencedorId,
-                  bonus: luta.resultado?.bonusLuta ? 'Luta da Noite' : luta.resultado?.bonusPerformance ? 'Performance da Noite' : null,
+                  bonus: bonusString,
                   disputaTitulo: luta.resultado?.titulo || false,
                   noContest: noContest
                 }
@@ -575,6 +529,18 @@ export class EventoController {
       } else if (lutaData.resultado === 'NC') {
         noContest = true;
       }
+
+      // Processar os bônus corretamente como string
+      let bonusString: string | null = null;
+      if (lutaData.bonus) {
+        if (Array.isArray(lutaData.bonus)) {
+          // Se for um array, junte com vírgula
+          bonusString = lutaData.bonus.length > 0 ? lutaData.bonus.join(',') : null;
+        } else if (typeof lutaData.bonus === 'string') {
+          // Se já for string, use diretamente
+          bonusString = lutaData.bonus;
+        }
+      }
       
       // Criar a luta
       const luta = await this.prisma.luta.create({
@@ -587,7 +553,7 @@ export class EventoController {
           tempo: lutaData.tempo || null,
           metodoVitoria: metodoVitoria,
           vencedorId: vencedorId,
-          bonus: lutaData.bonus || null,
+          bonus: bonusString,
           disputaTitulo: lutaData.titulo || false,
           noContest: noContest
         },
@@ -598,21 +564,20 @@ export class EventoController {
         }
       });
       
+      this.logger.log(`Luta adicionada com sucesso ao evento ${id}`);
+      
+      // Se o evento estiver finalizado, atualize os rankings
+      if (evento.finalizado) {
+        this.logger.log(`Evento finalizado, atualizando rankings...`);
+        await this.rankingService.atualizarTodosOsRankings();
+      }
+      
       return { 
         mensagem: 'Luta adicionada com sucesso', 
-        luta 
+        luta
       };
     } catch (error) {
       this.logger.error(`Erro ao adicionar luta: ${error.message}`);
-      
-      if (error instanceof Prisma.PrismaClientValidationError) {
-        return { 
-          error: 'Erro de validação', 
-          statusCode: 400, 
-          detalhes: error.message.split('\n').slice(-3).join(' ')
-        };
-      }
-      
       return { 
         error: 'Erro ao adicionar luta', 
         statusCode: 500, 
