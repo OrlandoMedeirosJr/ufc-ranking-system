@@ -259,7 +259,7 @@ export class LutaController {
         'Peso Palha Feminino', 'Peso Mosca Feminino', 'Peso Galo Feminino', 'Peso Pena Feminino'
       ];
       
-      const resultado = [];
+      const resultado: { categoria: string; count: number }[] = [];
       
       for (const categoria of categorias) {
         const count = await this.prisma.luta.count({
