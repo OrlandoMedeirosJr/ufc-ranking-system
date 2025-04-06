@@ -9,12 +9,14 @@ import {
   Logger,
   NotFoundException,
   BadRequestException,
+  Get,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RankingService } from '../ranking/ranking.service';
 import { ApiOperation } from '@nestjs/swagger';
 import { Prisma } from '@prisma/client';
 import { EditarLutaDto } from './dto/editar-luta.dto';
+import { LutaService } from './luta.service';
 
 @Controller('lutas')
 export class LutaController {
@@ -22,7 +24,8 @@ export class LutaController {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rankingService: RankingService
+    private readonly rankingService: RankingService,
+    private readonly lutaService: LutaService,
   ) {}
 
   @Post()
@@ -159,9 +162,7 @@ export class LutaController {
         this.logger.log(`Luta atualizada com sucesso: ${JSON.stringify(lutaAtualizada)}`);
         
         // Atualizar todos os rankings
-        if (evento.finalizado) {
-          await this.rankingService.atualizarTodosOsRankings();
-        }
+        await this.rankingService.atualizarTodosOsRankings();
         
         return {
           message: 'Luta atualizada com sucesso',
@@ -186,5 +187,70 @@ export class LutaController {
       }
       throw error;
     }
+  }
+
+  @Post(':id/editar')
+  async editarLutaPost(@Param('id') id: string, @Body() dados: any) {
+    try {
+      const luta = await this.prisma.luta.findUnique({
+        where: { id: Number(id) },
+        include: { evento: true }
+      });
+      
+      if (!luta) {
+        return { error: 'Luta não encontrada', statusCode: 404 };
+      }
+      
+      // Verificar se o evento já está finalizado
+      const evento = await this.prisma.evento.findUnique({
+        where: { id: luta.eventoId }
+      });
+      
+      if (!evento) {
+        return { error: 'Evento não encontrado', statusCode: 404 };
+      }
+      
+      if (evento.finalizado) {
+        return { error: 'Não é possível editar uma luta de um evento finalizado', statusCode: 400 };
+      }
+      
+      this.logger.log(`Atualizando luta ${id} e recalculando rankings...`);
+      await this.prisma.luta.update({
+        where: { id: Number(id) },
+        data: dados
+      });
+      
+      // Sempre atualizar rankings após editar uma luta
+      await this.rankingService.atualizarTodosOsRankings();
+      this.logger.log(`Luta ${id} atualizada e rankings recalculados com sucesso`);
+      
+      return { mensagem: 'Luta editada e ranking atualizado' };
+    } catch (error) {
+      this.logger.error(`Erro ao editar luta ${id}: ${error.message}`);
+      return { 
+        error: 'Erro ao editar luta', 
+        statusCode: 500, 
+        detalhes: error.message 
+      };
+    }
+  }
+  
+  @Get(':id')
+  async obterLuta(@Param('id') id: string) {
+    const luta = await this.prisma.luta.findUnique({
+      where: { id: Number(id) },
+      include: {
+        lutador1: true,
+        lutador2: true,
+        vencedor: true,
+        evento: true
+      }
+    });
+    
+    if (!luta) {
+      return { error: 'Luta não encontrada', statusCode: 404 };
+    }
+    
+    return luta;
   }
 }

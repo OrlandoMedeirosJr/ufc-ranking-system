@@ -1,8 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class RankingService {
+  private readonly logger = new Logger(RankingService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async calcularPontuacaoLutador(lutadorId: number) {
@@ -78,23 +80,31 @@ export class RankingService {
         streakDerrotas = 0;
       }
 
+      // Processar bônus
       if (luta.bonus) {
+        // Registrar um log para debug
+        this.logger.debug(`Processando bônus para lutador ${lutadorId} na luta ${luta.id}: ${luta.bonus}`);
+        
         // Tratar múltiplos bônus separados por vírgula
         const bonuses = typeof luta.bonus === 'string' ? 
                         luta.bonus.split(',').map(b => b.trim()) : 
                         [luta.bonus];
         
+        this.logger.debug(`Bônus processados: ${JSON.stringify(bonuses)}`);
+                
         for (const bonus of bonuses) {
           if (bonus === 'Performance da Noite') {
             if (venceu) {
               pontos += 1;
               bonusTotal++;
+              this.logger.debug(`Adicionado bônus Performance da Noite: +1 ponto, total bonus: ${bonusTotal}`);
             }
           }
           
           if (bonus === 'Luta da Noite') {
             pontos += 1;
             bonusTotal++;
+            this.logger.debug(`Adicionado bônus Luta da Noite: +1 ponto, total bonus: ${bonusTotal}`);
           }
         }
       }
@@ -116,6 +126,8 @@ export class RankingService {
       pontos = 95;
     }
 
+    this.logger.debug(`Pontuação final do lutador ${lutadorId}: ${pontos} pontos, ${bonusTotal} bônus`);
+
     return {
       pontos,
       vitoriasTitulo,
@@ -129,34 +141,59 @@ export class RankingService {
 
   async atualizarTodosOsRankings() {
     try {
+      this.logger.log('Iniciando atualização de todos os rankings');
+      
       const lutadores = await this.prisma.lutador.findMany();
+      this.logger.log(`Processando ${lutadores.length} lutadores para atualização de ranking`);
+      
       const rankingAnterior = await this.prisma.ranking.findMany();
       const rankingMap: Record<string, any[]> = {};
 
+      // Inicializar todas as categorias
+      const categorias = [
+        'Peso por Peso',
+        'Peso Mosca',
+        'Peso Galo',
+        'Peso Pena',
+        'Peso Leve',
+        'Peso Meio-Médio',
+        'Peso Médio',
+        'Peso Meio-Pesado',
+        'Peso Pesado',
+        'Peso Mosca Feminino',
+        'Peso Palha Feminino',
+        'Peso Galo Feminino',
+        'Peso Pena Feminino'
+      ];
+      
+      // Inicializar mapas para todas as categorias
+      categorias.forEach(categoria => {
+        rankingMap[categoria] = [];
+      });
+
       for (const lutador of lutadores) {
+        this.logger.debug(`Calculando pontuação para lutador: ${lutador.nome} (ID: ${lutador.id})`);
         const resultado = await this.calcularPontuacaoLutador(lutador.id);
 
-        const lutas = await this.prisma.luta.findMany({
-          where: {
-            OR: [{ lutador1Id: lutador.id }, { lutador2Id: lutador.id }],
-            noContest: false,
-          },
-          select: { categoria: true },
-          distinct: ['categoria'],
-        });
+        // Obter a categoria atual do lutador
+        const categoriaAtual = lutador.categoriaAtual || 'Peso por Peso';
 
-        for (const l of lutas) {
-          const categoria = l.categoria;
-          if (!rankingMap[categoria]) rankingMap[categoria] = [];
-
-          rankingMap[categoria].push({
+        // Adicionar ao ranking da categoria atual do lutador, se não for vazia
+        if (categoriaAtual && categoriaAtual !== '') {
+          if (!rankingMap[categoriaAtual]) {
+            rankingMap[categoriaAtual] = [];
+          }
+          
+          rankingMap[categoriaAtual].push({
             lutadorId: lutador.id,
             nome: lutador.nome,
             ...resultado,
           });
+          
+          this.logger.debug(`Adicionado lutador ${lutador.nome} à categoria ${categoriaAtual} com ${resultado.pontos} pontos`);
         }
 
-        if (!rankingMap['Peso por Peso']) rankingMap['Peso por Peso'] = [];
+        // Sempre adicionar ao ranking Peso por Peso
         rankingMap['Peso por Peso'].push({
           lutadorId: lutador.id,
           nome: lutador.nome,
@@ -164,9 +201,19 @@ export class RankingService {
         });
       }
 
+      this.logger.log(`Removendo entradas antigas do ranking antes da atualização`);
       await this.prisma.ranking.deleteMany();
 
+      let totalEntradasCriadas = 0;
+      
       for (const [categoria, lutadores] of Object.entries(rankingMap)) {
+        if (lutadores.length === 0) {
+          this.logger.debug(`Categoria ${categoria} não possui lutadores`);
+          continue;
+        }
+        
+        this.logger.log(`Processando categoria ${categoria} com ${lutadores.length} lutadores`);
+        
         const ordenado = lutadores.sort((a, b) => {
           if (b.pontos !== a.pontos) return b.pontos - a.pontos;
           if (a.derrotas !== b.derrotas) return a.derrotas - b.derrotas;
@@ -224,12 +271,16 @@ export class RankingService {
               variacao,
             },
           });
+          
+          totalEntradasCriadas++;
+          
+          this.logger.debug(`Criada entrada de ranking para ${entry.nome} na categoria ${categoria}: posição ${posicao}, pontos ${entry.pontos}`);
         }
       }
 
-      console.log('✅ Ranking atualizado com sucesso.');
+      this.logger.log(`✅ Ranking atualizado com sucesso. ${totalEntradasCriadas} entradas criadas no ranking.`);
     } catch (error) {
-      console.error('❌ Erro ao atualizar ranking:', error);
+      this.logger.error(`❌ Erro ao atualizar ranking: ${error.message}`, error.stack);
       throw new Error(`Falha ao atualizar o ranking: ${error.message}`);
     }
   }

@@ -1,34 +1,47 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface RecordeInfo {
   tipo: string;
   lutador: string | undefined;
   valor: number;
+  categoria?: string;
 }
 
 @Injectable()
 export class RecordeService {
+  private readonly logger = new Logger(RecordeService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async listarRecordes(): Promise<RecordeInfo[]> {
-    return this.calcularRecordesAtuais();
+    this.logger.log('Calculando lista atual de recordes');
+    const recordesGerais = await this.calcularRecordesAtuais();
+    const recordesPorCategoria = await this.calcularRecordesPorCategoria();
+    return [...recordesGerais, ...recordesPorCategoria];
   }
 
   async verificarNovosRecordes(): Promise<RecordeInfo[]> {
+    this.logger.log('Verificando novos recordes');
     const atuais = await this.calcularRecordesAtuais();
     const novos: RecordeInfo[] = [];
 
     for (const recorde of atuais) {
+      const chave = recorde.categoria 
+        ? `${recorde.tipo}-${recorde.categoria}` 
+        : recorde.tipo;
+        
       if (
-        !this.#ultimosRecordesCache[recorde.tipo] ||
-        this.#ultimosRecordesCache[recorde.tipo].valor < recorde.valor
+        !this.#ultimosRecordesCache[chave] ||
+        this.#ultimosRecordesCache[chave].valor < recorde.valor
       ) {
+        this.logger.log(`Novo recorde detectado: ${recorde.tipo}${recorde.categoria ? ` (${recorde.categoria})` : ''} - ${recorde.lutador} (${recorde.valor})`);
         novos.push(recorde);
-        this.#ultimosRecordesCache[recorde.tipo] = recorde;
+        this.#ultimosRecordesCache[chave] = recorde;
       }
     }
 
+    this.logger.log(`Total de novos recordes: ${novos.length}`);
     return novos;
   }
 
@@ -105,6 +118,87 @@ export class RecordeService {
       });
     }
 
+    // Calcular sequências de vitórias e derrotas
+    const lutadores = await this.prisma.lutador.findMany();
+    let maxVitoriaConsecutiva = { lutadorId: 0, nome: '', valor: 0 };
+    let maxDerrotaConsecutiva = { lutadorId: 0, nome: '', valor: 0 };
+
+    for (const lutador of lutadores) {
+      const lutas = await this.prisma.luta.findMany({
+        where: {
+          OR: [
+            { lutador1Id: lutador.id },
+            { lutador2Id: lutador.id },
+          ],
+          noContest: false,
+        },
+        include: { evento: true }
+      });
+
+      // Ordenar lutas por data
+      lutas.sort((a, b) => new Date(a.evento.data).getTime() - new Date(b.evento.data).getTime());
+
+      let streakVitorias = 0;
+      let maxStreakVitorias = 0;
+      let streakDerrotas = 0;
+      let maxStreakDerrotas = 0;
+
+      for (const luta of lutas) {
+        const venceu = luta.vencedorId === lutador.id;
+        const perdeu = luta.vencedorId && luta.vencedorId !== lutador.id;
+
+        if (venceu) {
+          streakVitorias++;
+          if (streakVitorias > maxStreakVitorias) {
+            maxStreakVitorias = streakVitorias;
+          }
+          streakDerrotas = 0;
+        } else if (perdeu) {
+          streakDerrotas++;
+          if (streakDerrotas > maxStreakDerrotas) {
+            maxStreakDerrotas = streakDerrotas;
+          }
+          streakVitorias = 0;
+        } else {
+          // Empate ou no contest
+          streakVitorias = 0;
+          streakDerrotas = 0;
+        }
+      }
+
+      if (maxStreakVitorias > maxVitoriaConsecutiva.valor) {
+        maxVitoriaConsecutiva = { 
+          lutadorId: lutador.id, 
+          nome: lutador.nome, 
+          valor: maxStreakVitorias 
+        };
+      }
+
+      if (maxStreakDerrotas > maxDerrotaConsecutiva.valor) {
+        maxDerrotaConsecutiva = { 
+          lutadorId: lutador.id, 
+          nome: lutador.nome, 
+          valor: maxStreakDerrotas 
+        };
+      }
+    }
+
+    if (maxVitoriaConsecutiva.valor > 0) {
+      recordes.push({
+        tipo: 'Mais vitórias consecutivas',
+        lutador: maxVitoriaConsecutiva.nome,
+        valor: maxVitoriaConsecutiva.valor,
+      });
+    }
+
+    if (maxDerrotaConsecutiva.valor > 0) {
+      recordes.push({
+        tipo: 'Mais derrotas consecutivas',
+        lutador: maxDerrotaConsecutiva.nome,
+        valor: maxDerrotaConsecutiva.valor,
+      });
+    }
+
     const lutas = await this.prisma.luta.findMany({
       where: { vencedorId: { not: null } },
     });
@@ -150,6 +244,151 @@ export class RecordeService {
       maxPor('bonus', 'Mais bônus da noite'),
     ]);
 
+    return recordes;
+  }
+
+  async calcularRecordesPorCategoria(): Promise<RecordeInfo[]> {
+    const recordes: RecordeInfo[] = [];
+    const categorias = [
+      'Peso Mosca',
+      'Peso Galo',
+      'Peso Pena',
+      'Peso Leve',
+      'Peso Meio-Médio',
+      'Peso Médio',
+      'Peso Meio-Pesado',
+      'Peso Pesado',
+      'Peso Mosca Feminino',
+      'Peso Palha Feminino',
+      'Peso Galo Feminino',
+      'Peso Pena Feminino'
+    ];
+
+    for (const categoria of categorias) {
+      // Obter lutadores da categoria
+      const lutadoresCategoria = await this.prisma.lutador.findMany({
+        where: { categoriaAtual: categoria }
+      });
+      
+      if (lutadoresCategoria.length === 0) continue;
+      
+      const lutadoresIds = lutadoresCategoria.map(l => l.id);
+      
+      // Mais lutas na categoria
+      const lutasCategoria: Record<number, number> = {};
+      for (const lutadorId of lutadoresIds) {
+        const lutas = await this.prisma.luta.count({
+          where: {
+            OR: [
+              { lutador1Id: lutadorId },
+              { lutador2Id: lutadorId }
+            ],
+            categoria: categoria
+          }
+        });
+        if (lutas > 0) {
+          lutasCategoria[lutadorId] = lutas;
+        }
+      }
+      
+      const maisLutasCategoria = Object.entries(lutasCategoria)
+        .sort((a, b) => Number(b[1]) - Number(a[1]))[0];
+        
+      if (maisLutasCategoria && Number(maisLutasCategoria[1]) > 0) {
+        const lutador = await this.prisma.lutador.findUnique({
+          where: { id: Number(maisLutasCategoria[0]) }
+        });
+        recordes.push({
+          tipo: 'Mais lutas',
+          lutador: lutador?.nome,
+          valor: Number(maisLutasCategoria[1]),
+          categoria
+        });
+      }
+      
+      // Mais vitórias na categoria
+      const vitoriasCategoria: Record<number, number> = {};
+      for (const lutadorId of lutadoresIds) {
+        const vitorias = await this.prisma.luta.count({
+          where: {
+            vencedorId: lutadorId,
+            categoria: categoria
+          }
+        });
+        if (vitorias > 0) {
+          vitoriasCategoria[lutadorId] = vitorias;
+        }
+      }
+      
+      const maisVitoriasCategoria = Object.entries(vitoriasCategoria)
+        .sort((a, b) => Number(b[1]) - Number(a[1]))[0];
+        
+      if (maisVitoriasCategoria && Number(maisVitoriasCategoria[1]) > 0) {
+        const lutador = await this.prisma.lutador.findUnique({
+          where: { id: Number(maisVitoriasCategoria[0]) }
+        });
+        recordes.push({
+          tipo: 'Mais vitórias',
+          lutador: lutador?.nome,
+          valor: Number(maisVitoriasCategoria[1]),
+          categoria
+        });
+      }
+      
+      // Mais vitórias consecutivas na categoria
+      let maxVitoriaConsecutivaCategoria = { lutadorId: 0, nome: '', valor: 0 };
+      
+      for (const lutador of lutadoresCategoria) {
+        const lutas = await this.prisma.luta.findMany({
+          where: {
+            OR: [
+              { lutador1Id: lutador.id },
+              { lutador2Id: lutador.id }
+            ],
+            categoria: categoria,
+            noContest: false
+          },
+          include: { evento: true }
+        });
+        
+        // Ordenar lutas por data
+        lutas.sort((a, b) => new Date(a.evento.data).getTime() - new Date(b.evento.data).getTime());
+        
+        let streakVitorias = 0;
+        let maxStreakVitorias = 0;
+        
+        for (const luta of lutas) {
+          const venceu = luta.vencedorId === lutador.id;
+          
+          if (venceu) {
+            streakVitorias++;
+            if (streakVitorias > maxStreakVitorias) {
+              maxStreakVitorias = streakVitorias;
+            }
+          } else {
+            streakVitorias = 0;
+          }
+        }
+        
+        if (maxStreakVitorias > maxVitoriaConsecutivaCategoria.valor) {
+          maxVitoriaConsecutivaCategoria = {
+            lutadorId: lutador.id,
+            nome: lutador.nome,
+            valor: maxStreakVitorias
+          };
+        }
+      }
+      
+      if (maxVitoriaConsecutivaCategoria.valor > 0) {
+        recordes.push({
+          tipo: 'Mais vitórias consecutivas',
+          lutador: maxVitoriaConsecutivaCategoria.nome,
+          valor: maxVitoriaConsecutivaCategoria.valor,
+          categoria
+        });
+      }
+    }
+    
     return recordes;
   }
 }

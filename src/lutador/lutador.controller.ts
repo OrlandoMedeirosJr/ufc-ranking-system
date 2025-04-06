@@ -95,18 +95,29 @@ export class LutadorController {
         derrotas++;
       }
 
+      // Processar bônus
       if (luta.bonus) {
+        this.logger.debug(`Processando bônus para estatísticas do lutador ${lutadorId}: ${luta.bonus}`);
+        
         // Tratar múltiplos bônus separados por vírgula
         const bonuses = typeof luta.bonus === 'string' ? 
-                        luta.bonus.split(',').map(b => b.trim()) : 
-                        [luta.bonus];
+                      luta.bonus.split(',').map(b => b.trim()) : 
+                      [luta.bonus];
         
         for (const bonusItem of bonuses) {
-          if (bonusItem === 'Performance da Noite' && venceu) bonus++;
-          if (bonusItem === 'Luta da Noite') bonus++;
+          if (bonusItem === 'Performance da Noite' && venceu) {
+            bonus++;
+            this.logger.debug(`Adicionado bônus Performance da Noite às estatísticas do lutador ${lutadorId}`);
+          }
+          if (bonusItem === 'Luta da Noite') {
+            bonus++;
+            this.logger.debug(`Adicionado bônus Luta da Noite às estatísticas do lutador ${lutadorId}`);
+          }
         }
       }
     }
+
+    this.logger.debug(`Estatísticas do lutador ${lutadorId} - Lutas: ${lutas.length}, Vitórias: ${vitorias}, Bônus: ${bonus}`);
 
     return {
       nome: lutador.nome,
@@ -173,18 +184,29 @@ export class LutadorController {
         empates++;
       }
 
+      // Processar bônus
       if (luta.bonus) {
+        this.logger.debug(`Processando bônus para estatísticas do lutador ${lutadorId} na categoria ${categoria}: ${luta.bonus}`);
+        
         // Tratar múltiplos bônus separados por vírgula
         const bonuses = typeof luta.bonus === 'string' ? 
                         luta.bonus.split(',').map(b => b.trim()) : 
                         [luta.bonus];
         
         for (const bonusItem of bonuses) {
-          if (bonusItem === 'Performance da Noite' && venceu) bonus++;
-          if (bonusItem === 'Luta da Noite') bonus++;
+          if (bonusItem === 'Performance da Noite' && venceu) {
+            bonus++;
+            this.logger.debug(`Adicionado bônus Performance da Noite às estatísticas do lutador ${lutadorId} na categoria ${categoria}`);
+          }
+          if (bonusItem === 'Luta da Noite') {
+            bonus++;
+            this.logger.debug(`Adicionado bônus Luta da Noite às estatísticas do lutador ${lutadorId} na categoria ${categoria}`);
+          }
         }
       }
     }
+
+    this.logger.debug(`Estatísticas do lutador ${lutadorId} na categoria ${categoria} - Lutas: ${lutas.length}, Vitórias: ${vitorias}, Bônus: ${bonus}`);
 
     return {
       nome: lutador.nome,

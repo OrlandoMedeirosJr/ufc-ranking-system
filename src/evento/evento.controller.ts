@@ -16,6 +16,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { EventoService } from './evento.service';
 import { Prisma, Luta } from '@prisma/client';
+import { RankingService } from '../ranking/ranking.service';
 
 @Controller('eventos')
 export class EventoController {
@@ -24,6 +25,7 @@ export class EventoController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventoService: EventoService,
+    private readonly rankingService: RankingService,
   ) {}
 
   @Get()
@@ -294,6 +296,20 @@ export class EventoController {
       // Extrair dados do evento e lutas
       const { lutas, ...eventoData } = data;
       
+      // Verificar se o evento está sendo finalizado
+      const eventoExistente = await this.prisma.evento.findUnique({
+        where: { id: Number(id) }
+      });
+      
+      if (!eventoExistente) {
+        throw new HttpException(
+          { error: 'Evento não encontrado' },
+          HttpStatus.NOT_FOUND
+        );
+      }
+      
+      const finalizandoEvento = eventoExistente && !eventoExistente.finalizado && eventoData.finalizado === true;
+      
       // Atualizar os dados básicos do evento
       const evento = await this.prisma.evento.update({
         where: { id: Number(id) },
@@ -385,6 +401,15 @@ export class EventoController {
         }
       }
       
+      // Se o evento estava sendo finalizado, atualizar os rankings
+      if (finalizandoEvento) {
+        this.logger.log(`Evento ${id} sendo finalizado, atualizando rankings...`);
+        await this.rankingService.atualizarTodosOsRankings();
+      } else {
+        this.logger.log(`Evento ${id} foi editado, atualizando rankings...`);
+        await this.rankingService.atualizarTodosOsRankings();
+      }
+      
       // Buscar o evento completo após as atualizações
       const eventoAtualizado = await this.prisma.evento.findUnique({
         where: { id: Number(id) },
@@ -445,9 +470,28 @@ export class EventoController {
     }
   }
 
-  @Post(':id/finalizar')
+  @Put(':id/finalizar')
   async finalizarEvento(@Param('id') id: string) {
-    return this.eventoService.finalizarEvento(Number(id));
+    try {
+      this.logger.log(`Iniciando finalização do evento ${id} via controller`);
+      
+      // Registrar os serviços disponíveis para depuração
+      this.logger.log(`Serviços injetados: eventoService=${!!this.eventoService}, rankingService=${!!this.rankingService}`);
+      
+      // Chamar o serviço para finalizar o evento
+      this.logger.log(`Chamando eventoService.finalizarEvento para o evento ${id}`);
+      const resultado = await this.eventoService.finalizarEvento(Number(id));
+      
+      this.logger.log(`Evento ${id} finalizado com sucesso`);
+      return resultado;
+    } catch (error) {
+      this.logger.error(`Erro ao finalizar evento ${id}: ${error.message}`);
+      return { 
+        error: 'Erro ao finalizar evento', 
+        statusCode: error.status || 500, 
+        detalhes: error.message 
+      };
+    }
   }
 
   @Delete('sistema/limpar-banco')

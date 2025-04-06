@@ -39,6 +39,9 @@ model Evento {
   finalizado Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  publicoTotal Int?
+  arrecadacao  Float?
+  payPerView   Int?
 
   // Relacionamentos
   lutas Luta[]
