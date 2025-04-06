@@ -143,13 +143,18 @@ export class RecordeService {
       let maxStreakVitorias = 0;
       let streakDerrotas = 0;
       let maxStreakDerrotas = 0;
+      
+      // Sequência atual - mantém a contagem mesmo com empates
+      let sequenciaAtualVitorias = 0;
 
       for (const luta of lutas) {
         const venceu = luta.vencedorId === lutador.id;
         const perdeu = luta.vencedorId && luta.vencedorId !== lutador.id;
+        const empate = !luta.vencedorId && !luta.noContest;
 
         if (venceu) {
-          streakVitorias++;
+          sequenciaAtualVitorias++;
+          streakVitorias = sequenciaAtualVitorias;
           if (streakVitorias > maxStreakVitorias) {
             maxStreakVitorias = streakVitorias;
           }
@@ -159,11 +164,14 @@ export class RecordeService {
           if (streakDerrotas > maxStreakDerrotas) {
             maxStreakDerrotas = streakDerrotas;
           }
+          sequenciaAtualVitorias = 0;
           streakVitorias = 0;
-        } else {
-          // Empate ou no contest
-          streakVitorias = 0;
+        } else if (empate) {
+          // Em caso de empate, mantém a sequência atual de vitórias
+          // mas zera a sequência de derrotas
           streakDerrotas = 0;
+        } else {
+          // No contest - não altera sequências
         }
       }
 
@@ -409,16 +417,27 @@ export class RecordeService {
         let streakVitorias = 0;
         let maxStreakVitorias = 0;
         
+        // Sequência atual - mantém a contagem mesmo com empates
+        let sequenciaAtualVitorias = 0;
+        
         for (const luta of lutas) {
           const venceu = luta.vencedorId === lutador.id;
+          const perdeu = luta.vencedorId && luta.vencedorId !== lutador.id;
+          const empate = !luta.vencedorId && !luta.noContest;
           
           if (venceu) {
-            streakVitorias++;
+            sequenciaAtualVitorias++;
+            streakVitorias = sequenciaAtualVitorias;
             if (streakVitorias > maxStreakVitorias) {
               maxStreakVitorias = streakVitorias;
             }
-          } else {
+          } else if (perdeu) {
+            sequenciaAtualVitorias = 0;
             streakVitorias = 0;
+          } else if (empate) {
+            // Em caso de empate, mantém a sequência atual de vitórias
+          } else {
+            // No contest - não altera sequências
           }
         }
         

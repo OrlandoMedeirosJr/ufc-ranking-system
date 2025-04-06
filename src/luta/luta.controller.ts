@@ -97,9 +97,31 @@ export class LutaController {
         if (lutaDto.vencedor === 'empate') {
           // Não existe campo empate no schema, apenas definir vencedorId como null
           updateData.vencedorId = null;
+          // Para empates, limpar método de vitória e round
+          updateData.metodoVitoria = null;
+          updateData.round = null;
+          // Manter apenas bônus de "Luta da Noite" se existir
+          const bonusesExistentes = lutaExistente.bonus ? 
+            (typeof lutaExistente.bonus === 'string' ? 
+              lutaExistente.bonus.split(',').map(b => b.trim()) : 
+              Array.isArray(lutaExistente.bonus) ? lutaExistente.bonus : [String(lutaExistente.bonus)]) : 
+            [];
+          let bonuses: string[] = [];
+          if (bonusesExistentes.includes('Luta da Noite')) {
+            bonuses = ['Luta da Noite'];
+          } else {
+            bonuses = [];
+          }
+          this.logger.log(`Luta marcada como empate: limpando método, round e ajustando bônus`);
         } else if (lutaDto.vencedor === 'nocontest') {
           updateData.noContest = true;
           updateData.vencedorId = null;
+          // Para No Contest, limpar método de vitória, round e todos os bônus
+          updateData.metodoVitoria = null;
+          updateData.round = null;
+          let bonuses: string[] = [];
+          bonuses = []; // Remover todos os bônus
+          this.logger.log(`Luta marcada como No Contest: limpando método, round e todos os bônus`);
         } else if (lutaDto.vencedor === 'lutadorA') {
           updateData.vencedorId = lutaExistente.lutador1Id;
         } else if (lutaDto.vencedor === 'lutadorB') {
@@ -111,32 +133,52 @@ export class LutaController {
       this.logger.log(`Bônus recebidos: bonusLuta=${lutaDto.bonusLuta}, bonusPerformance=${lutaDto.bonusPerformance}`);
       this.logger.log(`Bônus existentes: ${lutaExistente.bonus}`);
       
-      // Sempre processar os bônus
-      let bonuses: string[] = [];
-      
-      // Verificar os bônus existentes
-      const bonusesExistentes = lutaExistente.bonus ? 
-        (typeof lutaExistente.bonus === 'string' ? 
-          lutaExistente.bonus.split(',').map(b => b.trim()) : 
-          Array.isArray(lutaExistente.bonus) ? lutaExistente.bonus : [String(lutaExistente.bonus)]) : 
-        [];
-      
-      this.logger.log(`Bônus existentes processados: ${JSON.stringify(bonusesExistentes)}`);
-      
-      // Processar bônus apenas se explicitamente fornecidos no DTO
-      // Importante: false é um valor válido (remover bônus), undefined significa "não alterar"
-      if (lutaDto.bonusLuta === true) {
-        bonuses.push('Luta da Noite');
-      } else if (lutaDto.bonusLuta === undefined && bonusesExistentes.includes('Luta da Noite')) {
-        // Manter o bônus existente se não foi especificado
-        bonuses.push('Luta da Noite');
-      }
-      
-      if (lutaDto.bonusPerformance === true) {
-        bonuses.push('Performance da Noite');
-      } else if (lutaDto.bonusPerformance === undefined && bonusesExistentes.includes('Performance da Noite')) {
-        // Manter o bônus existente se não foi especificado
-        bonuses.push('Performance da Noite');
+      // Verificar se já não processamos os bônus no bloco de código anterior
+      if (lutaDto.vencedor !== 'empate' && lutaDto.vencedor !== 'nocontest') {
+        // Sempre processar os bônus
+        let bonuses: string[] = [];
+        
+        // Verificar os bônus existentes
+        const bonusesExistentes = lutaExistente.bonus ? 
+          (typeof lutaExistente.bonus === 'string' ? 
+            lutaExistente.bonus.split(',').map(b => b.trim()) : 
+            Array.isArray(lutaExistente.bonus) ? lutaExistente.bonus : [String(lutaExistente.bonus)]) : 
+          [];
+        
+        this.logger.log(`Bônus existentes processados: ${JSON.stringify(bonusesExistentes)}`);
+        
+        // Processar bônus apenas se explicitamente fornecidos no DTO
+        // Importante: false é um valor válido (remover bônus), undefined significa "não alterar"
+        if (lutaDto.bonusLuta === true) {
+          bonuses.push('Luta da Noite');
+        } else if (lutaDto.bonusLuta === undefined && bonusesExistentes.includes('Luta da Noite')) {
+          // Manter o bônus existente se não foi especificado
+          bonuses.push('Luta da Noite');
+        }
+        
+        if (lutaDto.bonusPerformance === true) {
+          // Verificar se é uma decisão - nesse caso não deve permitir Performance da Noite
+          const metodoAtualizado = lutaDto.metodo || lutaExistente.metodoVitoria;
+          const ehDecisao = metodoAtualizado && metodoAtualizado.toLowerCase().includes('decisão');
+          
+          if (!ehDecisao) {
+            bonuses.push('Performance da Noite');
+            this.logger.log(`Adicionando bônus de Performance da Noite`);
+          } else {
+            this.logger.warn(`Bônus de Performance da Noite não pode ser adicionado em lutas por decisão`);
+          }
+        } else if (lutaDto.bonusPerformance === undefined && bonusesExistentes.includes('Performance da Noite')) {
+          // Verificar se o método foi alterado para decisão
+          const metodoAtualizado = lutaDto.metodo || lutaExistente.metodoVitoria;
+          const ehDecisao = metodoAtualizado && metodoAtualizado.toLowerCase().includes('decisão');
+          
+          if (!ehDecisao) {
+            // Manter o bônus existente se não foi especificado e não é decisão
+            bonuses.push('Performance da Noite');
+          } else {
+            this.logger.warn(`Removendo bônus de Performance da Noite devido à alteração para decisão`);
+          }
+        }
       }
       
       // Atualizar o campo de bônus
