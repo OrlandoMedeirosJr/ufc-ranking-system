@@ -6,6 +6,7 @@ import { EventoModule } from './evento/evento.module';
 import { LutaModule } from './luta/luta.module';
 import { RecordeModule } from './recorde/recorde.module';
 import { LutadorModule } from './lutador/lutador.module';
+import { BackupModule } from './backup/backup.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { LutadorModule } from './lutador/lutador.module';
     LutaModule,
     RecordeModule,
     LutadorModule,
+    BackupModule,
   ],
   controllers: [AppController],
   providers: [AppService],
