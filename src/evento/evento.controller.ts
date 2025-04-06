@@ -384,8 +384,8 @@ export class EventoController {
                 bonusString = 'Performance da Noite';
               }
               
-              // Criar a luta com os dados recebidos
-              await this.prisma.luta.create({
+              // Criar a luta
+              const lutaCriada = await this.prisma.luta.create({
                 data: {
                   eventoId: Number(id),
                   lutador1Id: lutador1.id,
@@ -398,6 +398,11 @@ export class EventoController {
                   bonus: bonusString,
                   disputaTitulo: luta.resultado?.titulo || false,
                   noContest: noContest
+                },
+                include: {
+                  lutador1: true,
+                  lutador2: true,
+                  vencedor: true
                 }
               });
               
@@ -540,11 +545,10 @@ export class EventoController {
     }
   }
 
-  // Novo endpoint para adicionar luta a um evento existente
   @Post(':id/lutas')
   async adicionarLuta(@Param('id') id: string, @Body() lutaData: any) {
     try {
-      // Verificar se o evento existe
+      // Buscar o evento
       const evento = await this.prisma.evento.findUnique({
         where: { id: Number(id) }
       });
@@ -553,46 +557,40 @@ export class EventoController {
         return { error: 'Evento não encontrado', statusCode: 404 };
       }
       
-      // Verificar se os lutadores existem
-      const lutador1 = await this.prisma.lutador.findFirst({ 
-        where: { nome: lutaData.lutador1 } 
+      // Buscar os lutadores
+      const lutador1 = await this.prisma.lutador.findFirst({
+        where: { nome: lutaData.lutador1 }
       });
       
-      const lutador2 = await this.prisma.lutador.findFirst({ 
-        where: { nome: lutaData.lutador2 } 
+      const lutador2 = await this.prisma.lutador.findFirst({
+        where: { nome: lutaData.lutador2 }
       });
       
       if (!lutador1 || !lutador2) {
-        return { 
-          error: 'Lutador não encontrado', 
-          statusCode: 404, 
-          lutador: !lutador1 ? lutaData.lutador1 : lutaData.lutador2 
-        };
+        return { error: 'Lutador não encontrado', statusCode: 404 };
       }
       
-      // Determinar o vencedor com base no resultado
+      // Verificar resultado e definir vencedor
       let vencedorId: number | null = null;
-      let metodoVitoria = lutaData.tipo || null;
       let noContest = false;
+      let metodoVitoria: string | null = null;
       
       if (lutaData.resultado === 'V1') {
         vencedorId = lutador1.id;
+        metodoVitoria = lutaData.metodoVitoria;
       } else if (lutaData.resultado === 'V2') {
         vencedorId = lutador2.id;
+        metodoVitoria = lutaData.metodoVitoria;
       } else if (lutaData.resultado === 'NC') {
         noContest = true;
       }
-
-      // Processar os bônus corretamente como string
-      let bonusString: string | null = null;
-      if (lutaData.bonus) {
-        if (Array.isArray(lutaData.bonus)) {
-          // Se for um array, junte com vírgula
-          bonusString = lutaData.bonus.length > 0 ? lutaData.bonus.join(',') : null;
-        } else if (typeof lutaData.bonus === 'string') {
-          // Se já for string, use diretamente
-          bonusString = lutaData.bonus;
-        }
+      
+      // Validar bônus
+      let bonusString = null;
+      if (lutaData.bonus && Array.isArray(lutaData.bonus)) {
+        bonusString = lutaData.bonus.join(',');
+      } else if (typeof lutaData.bonus === 'string') {
+        bonusString = lutaData.bonus;
       }
       
       // Criar a luta
@@ -602,7 +600,7 @@ export class EventoController {
           lutador1Id: lutador1.id,
           lutador2Id: lutador2.id,
           categoria: lutaData.categoria || 'Sem categoria',
-          round: parseInt(lutaData.round) || null,
+          round: lutaData.round ? parseInt(lutaData.round) : null,
           tempo: lutaData.tempo || null,
           metodoVitoria: metodoVitoria,
           vencedorId: vencedorId,

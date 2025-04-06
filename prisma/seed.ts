@@ -18,7 +18,6 @@ async function main() {
   console.log('📌 Criando lutadores...');
   const lutadores: Lutador[] = [];
   for (let i = 1; i <= 50; i++) {
-    const categoriaAleatoria = categorias[Math.floor(Math.random() * categorias.length)];
     const lutador = await prisma.lutador.create({
       data: {
         nome: `Lutador ${i}`,
@@ -26,7 +25,6 @@ async function main() {
         pais: paises[i % paises.length],
         sexo: sexos[i % sexos.length],
         altura: 1.7 + (Math.random() * 0.3),
-        categoriaAtual: categoriaAleatoria
       },
     });
     lutadores.push(lutador);

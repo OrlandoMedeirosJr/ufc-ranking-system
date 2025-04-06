@@ -325,17 +325,37 @@ export class RecordeService {
     ];
 
     for (const categoria of categorias) {
-      // Obter lutadores da categoria
-      const lutadoresCategoria = await this.prisma.lutador.findMany({
-        where: { categoriaAtual: categoria }
+      // Buscar lutadores que já participaram de lutas nessa categoria
+      const lutasCategoria = await this.prisma.luta.findMany({
+        where: { 
+          categoria: categoria 
+        },
+        select: {
+          lutador1Id: true,
+          lutador2Id: true
+        }
       });
       
-      if (lutadoresCategoria.length === 0) continue;
+      // Extrair IDs únicos dos lutadores
+      const lutadoresIds = new Set<number>();
+      for (const luta of lutasCategoria) {
+        lutadoresIds.add(luta.lutador1Id);
+        lutadoresIds.add(luta.lutador2Id);
+      }
       
-      const lutadoresIds = lutadoresCategoria.map(l => l.id);
+      if (lutadoresIds.size === 0) continue;
+      
+      // Buscar detalhes dos lutadores
+      const lutadoresCategoria = await this.prisma.lutador.findMany({
+        where: { 
+          id: {
+            in: Array.from(lutadoresIds)
+          }
+        }
+      });
       
       // Mais lutas na categoria
-      const lutasCategoria: Record<number, number> = {};
+      const lutasContagem: Record<number, number> = {};
       for (const lutadorId of lutadoresIds) {
         const lutas = await this.prisma.luta.count({
           where: {
@@ -347,11 +367,11 @@ export class RecordeService {
           }
         });
         if (lutas > 0) {
-          lutasCategoria[lutadorId] = lutas;
+          lutasContagem[lutadorId] = lutas;
         }
       }
       
-      const maisLutasCategoria = Object.entries(lutasCategoria)
+      const maisLutasCategoria = Object.entries(lutasContagem)
         .sort((a, b) => Number(b[1]) - Number(a[1]))[0];
         
       if (maisLutasCategoria && Number(maisLutasCategoria[1]) > 0) {

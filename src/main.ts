@@ -22,9 +22,10 @@ async function bootstrap() {
     // Configurar CORS para permitir acesso do frontend
     logger.log('Configurando CORS...');
     app.enableCors({
-      origin: configService.get<string>('FRONTEND_URL'),
-      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+      origin: true, // Permitir todas as origens durante o desenvolvimento
+      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
       credentials: true,
+      allowedHeaders: 'Content-Type,Authorization,Accept',
     });
     
     // Validação global

@@ -28,9 +28,4 @@ export class CreateLutadorDto {
   @IsOptional()
   @IsString()
   apelido?: string;
-
-  @ApiPropertyOptional({ description: 'Categoria atual do lutador', default: 'Peso Médio' })
-  @IsOptional()
-  @IsString()
-  categoriaAtual?: string;
 } 

@@ -165,22 +165,39 @@ export class RankingService {
         this.logger.debug(`Calculando pontuação para lutador: ${lutador.nome} (ID: ${lutador.id})`);
         const resultado = await this.calcularPontuacaoLutador(lutador.id);
 
-        // Obter a categoria atual do lutador
-        const categoriaAtual = lutador.categoriaAtual || 'Peso por Peso';
+        // Buscar todas as categorias em que o lutador já participou
+        const categoriasDeLutas = await this.prisma.luta.findMany({
+          where: {
+            OR: [
+              { lutador1Id: lutador.id },
+              { lutador2Id: lutador.id }
+            ],
+            categoria: {
+              not: 'Peso Casado' // Ignorar Peso Casado para rankings de categoria
+            }
+          },
+          select: {
+            categoria: true
+          },
+          distinct: ['categoria']
+        });
 
-        // Adicionar ao ranking da categoria atual do lutador, se não for vazia
-        if (categoriaAtual && categoriaAtual !== '') {
-          if (!rankingMap[categoriaAtual]) {
-            rankingMap[categoriaAtual] = [];
+        // Extrair as categorias únicas
+        const categoriasUnicas = categoriasDeLutas.map(luta => luta.categoria);
+        
+        // Adicionar o lutador ao ranking de cada categoria em que participou
+        for (const categoria of categoriasUnicas) {
+          if (!rankingMap[categoria]) {
+            rankingMap[categoria] = [];
           }
           
-          rankingMap[categoriaAtual].push({
+          rankingMap[categoria].push({
             lutadorId: lutador.id,
             nome: lutador.nome,
             ...resultado,
           });
           
-          this.logger.debug(`Adicionado lutador ${lutador.nome} à categoria ${categoriaAtual} com ${resultado.pontos} pontos`);
+          this.logger.debug(`Adicionado lutador ${lutador.nome} à categoria ${categoria} com ${resultado.pontos} pontos`);
         }
 
         // Sempre adicionar ao ranking Peso por Peso

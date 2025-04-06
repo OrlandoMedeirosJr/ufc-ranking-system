@@ -42,8 +42,7 @@ export class LutadorController {
           pais: data.pais,
           sexo: data.sexo,
           altura: data.altura || 1.80, // Valor padrão para altura se não fornecido
-          apelido: data.apelido || null,
-          categoriaAtual: data.categoriaAtual || "Peso Médio"
+          apelido: data.apelido || null
         },
       });
       this.logger.log(`Lutador criado com ID: ${lutador.id}`);
@@ -227,213 +226,288 @@ export class LutadorController {
 
   @Get(':nome/info-ranking')
   async obterInfoRanking(@Param('nome') nome: string) {
-    this.logger.log(`Buscando informações de ranking para o lutador ${nome}`);
-    
-    // Buscar o lutador pelo nome
-    const lutador = await this.prisma.lutador.findFirst({
-      where: {
-        nome: {
-          contains: nome,
-          mode: 'insensitive'
-        }
-      }
-    });
-
-    if (!lutador) {
-      throw new NotFoundException(`Lutador com nome ${nome} não encontrado`);
-    }
-
-    // Buscar posição no ranking peso por peso
-    const rankingPesoPorPeso = await this.prisma.ranking.findFirst({
-      where: {
-        lutadorId: lutador.id,
-        categoria: 'Peso por Peso'
-      }
-    });
-
-    // Buscar posição no ranking da categoria atual do lutador
-    const rankingCategoria = await this.prisma.ranking.findFirst({
-      where: {
-        lutadorId: lutador.id,
-        categoria: lutador.categoriaAtual
-      }
-    });
-
-    // Buscar as últimas lutas do lutador ordenadas por data (mais recentes primeiro)
-    const ultimasLutas = await this.prisma.luta.findMany({
-      where: {
-        OR: [
-          { lutador1Id: lutador.id },
-          { lutador2Id: lutador.id }
-        ]
-      },
-      include: {
-        evento: true
-      },
-      orderBy: {
-        evento: {
-          data: 'desc'
-        }
-      },
-      take: 15 // Consideramos até 15 lutas para calcular sequências
-    });
-
-    // Calcular a sequência atual (vitórias ou derrotas consecutivas)
-    let sequenciaAtual = 0;
-    let tipoSequencia = '';
-
-    // Correção específica para Royce Gracie
-    // Verificar se é Royce Gracie - correção específica
-    // O ID pode variar, por isso vamos verificar pelo nome também
-    const isRoyceGracie = lutador.nome === 'Royce Gracie';
-    
-    if (isRoyceGracie) {
-      // Forçar correção para o valor correto
-      sequenciaAtual = 11;
-      tipoSequencia = 'vitória';
-      this.logger.log(`Aplicando correção específica para Royce Gracie: ${sequenciaAtual} vitórias consecutivas`);
-    }
-
-    // Ordenar as lutas em ordem crescente de data para calcular a sequência
-    const lutasOrdenadas = [...ultimasLutas].sort((a, b) => 
-      new Date(a.evento.data).getTime() - new Date(b.evento.data).getTime()
-    );
-
-    // Log para depuração
-    this.logger.debug(`Calculando sequência para ${lutador.nome} com ${lutasOrdenadas.length} lutas`);
-    
-    for (const luta of lutasOrdenadas) {
-      const venceu = luta.vencedorId === lutador.id;
-      const perdeu = luta.vencedorId && luta.vencedorId !== lutador.id;
-      const empate = !luta.vencedorId && !luta.noContest;
-      const noContest = luta.noContest;
+    try {
+      this.logger.log(`Buscando informações de ranking para o lutador ${nome}`);
       
-      this.logger.debug(`Luta ${luta.id}: venceu=${venceu}, perdeu=${perdeu}, empate=${empate}, noContest=${noContest}`);
-      
-      if (sequenciaAtual === 0) {
-        // Primeira luta analisada
-        if (venceu) {
-          sequenciaAtual = 1;
-          tipoSequencia = 'vitória';
-          this.logger.debug(`Iniciando sequência de vitórias: ${sequenciaAtual}`);
-        } else if (perdeu) {
-          sequenciaAtual = 1;
-          tipoSequencia = 'derrota';
-          this.logger.debug(`Iniciando sequência de derrotas: ${sequenciaAtual}`);
-        } else if (empate) {
-          // Empate não inicia sequência
-          this.logger.debug(`Empate não inicia sequência`);
-          continue;
-        } else if (noContest) {
-          // No Contest não inicia sequência
-          this.logger.debug(`No Contest não inicia sequência`);
-          continue;
+      // Buscar o lutador pelo nome
+      const lutador = await this.prisma.lutador.findFirst({
+        where: {
+          nome: {
+            contains: nome,
+            mode: 'insensitive'
+          }
         }
-      } else {
-        // Lutas subsequentes
-        if (tipoSequencia === 'vitória') {
+      });
+      
+      if (!lutador) {
+        throw new NotFoundException(`Lutador com nome ${nome} não encontrado`);
+      }
+      
+      // Buscar posição no ranking peso por peso
+      const rankingPesoPorPeso = await this.prisma.ranking.findFirst({
+        where: { 
+          lutadorId: lutador.id,
+          categoria: 'Peso por Peso'
+        }
+      });
+      
+      // Buscar categorias do lutador
+      const categoriasDeLutas = await this.prisma.luta.findMany({
+        where: {
+          OR: [
+            { lutador1Id: lutador.id },
+            { lutador2Id: lutador.id }
+          ],
+          categoria: {
+            not: 'Peso Casado' // Ignorar Peso Casado
+          }
+        },
+        select: {
+          categoria: true
+        },
+        distinct: ['categoria']
+      });
+      
+      // Extrair categorias únicas
+      const categorias = categoriasDeLutas.map(luta => luta.categoria);
+      
+      // Buscar ranking na primeira categoria, se existir
+      let rankingCategoria: any = null;
+      let primeiraCategoria = categorias.length > 0 ? categorias[0] : null;
+      
+      if (primeiraCategoria) {
+        rankingCategoria = await this.prisma.ranking.findFirst({
+          where: { 
+            lutadorId: lutador.id,
+            categoria: primeiraCategoria
+          }
+        });
+      }
+      
+      // Buscar as últimas lutas do lutador ordenadas por data (mais recentes primeiro)
+      const ultimasLutas = await this.prisma.luta.findMany({
+        where: {
+          OR: [
+            { lutador1Id: lutador.id },
+            { lutador2Id: lutador.id }
+          ]
+        },
+        include: {
+          evento: true
+        },
+        orderBy: {
+          evento: {
+            data: 'desc'
+          }
+        },
+        take: 15 // Consideramos até 15 lutas para calcular sequências
+      });
+
+      // Calcular a sequência atual (vitórias ou derrotas consecutivas)
+      let sequenciaAtual = 0;
+      let sequenciaTipo = '';
+
+      // Correção específica para Royce Gracie
+      // Verificar se é Royce Gracie - correção específica
+      // O ID pode variar, por isso vamos verificar pelo nome também
+      const isRoyceGracie = lutador.nome === 'Royce Gracie';
+      
+      if (isRoyceGracie) {
+        // Forçar correção para o valor correto
+        sequenciaAtual = 11;
+        sequenciaTipo = 'vitória';
+        this.logger.log(`Aplicando correção específica para Royce Gracie: ${sequenciaAtual} vitórias consecutivas`);
+      }
+
+      // Ordenar as lutas em ordem crescente de data para calcular a sequência
+      const lutasOrdenadas = [...ultimasLutas].sort((a, b) => 
+        new Date(a.evento.data).getTime() - new Date(b.evento.data).getTime()
+      );
+
+      // Log para depuração
+      this.logger.debug(`Calculando sequência para ${lutador.nome} com ${lutasOrdenadas.length} lutas`);
+      
+      for (const luta of lutasOrdenadas) {
+        const venceu = luta.vencedorId === lutador.id;
+        const perdeu = luta.vencedorId && luta.vencedorId !== lutador.id;
+        const empate = !luta.vencedorId && !luta.noContest;
+        const noContest = luta.noContest;
+        
+        this.logger.debug(`Luta ${luta.id}: venceu=${venceu}, perdeu=${perdeu}, empate=${empate}, noContest=${noContest}`);
+        
+        if (sequenciaAtual === 0) {
+          // Primeira luta analisada
           if (venceu) {
-            sequenciaAtual++;
-            this.logger.debug(`Continuando sequência de vitórias: ${sequenciaAtual}`);
+            sequenciaAtual = 1;
+            sequenciaTipo = 'vitória';
+            this.logger.debug(`Iniciando sequência de vitórias: ${sequenciaAtual}`);
           } else if (perdeu) {
-            // Sequência quebrada
-            this.logger.debug(`Sequência de vitórias quebrada por derrota`);
-            break;
+            sequenciaAtual = 1;
+            sequenciaTipo = 'derrota';
+            this.logger.debug(`Iniciando sequência de derrotas: ${sequenciaAtual}`);
           } else if (empate) {
-            // Empate interrompe sequência para todos, exceto Royce Gracie
-            if (!isRoyceGracie) {
-              this.logger.debug(`Sequência de vitórias quebrada por empate`);
+            // Empate não inicia sequência
+            this.logger.debug(`Empate não inicia sequência`);
+            continue;
+          } else if (noContest) {
+            // No Contest não inicia sequência
+            this.logger.debug(`No Contest não inicia sequência`);
+            continue;
+          }
+        } else {
+          // Lutas subsequentes
+          if (sequenciaTipo === 'vitória') {
+            if (venceu) {
+              sequenciaAtual++;
+              this.logger.debug(`Continuando sequência de vitórias: ${sequenciaAtual}`);
+            } else if (perdeu) {
+              // Sequência quebrada
+              this.logger.debug(`Sequência de vitórias quebrada por derrota`);
               break;
-            } else {
-              this.logger.debug(`Mantendo sequência de Royce Gracie apesar do empate`);
+            } else if (empate) {
+              // Empate interrompe sequência para todos, exceto Royce Gracie
+              if (!isRoyceGracie) {
+                this.logger.debug(`Sequência de vitórias quebrada por empate`);
+                break;
+              } else {
+                this.logger.debug(`Mantendo sequência de Royce Gracie apesar do empate`);
+                continue;
+              }
+            } else if (noContest) {
+              // No Contest não altera sequências
+              this.logger.debug(`No Contest não altera sequência`);
               continue;
             }
-          } else if (noContest) {
-            // No Contest não altera sequências
-            this.logger.debug(`No Contest não altera sequência`);
-            continue;
-          }
-        } else if (tipoSequencia === 'derrota') {
-          if (perdeu) {
-            sequenciaAtual++;
-            this.logger.debug(`Continuando sequência de derrotas: ${sequenciaAtual}`);
-          } else if (venceu) {
-            // Sequência quebrada
-            this.logger.debug(`Sequência de derrotas quebrada por vitória`);
-            break;
-          } else if (empate) {
-            // Empate interrompe sequência
-            this.logger.debug(`Sequência de derrotas quebrada por empate`);
-            break;
-          } else if (noContest) {
-            // No Contest não altera sequências
-            this.logger.debug(`No Contest não altera sequência`);
-            continue;
+          } else if (sequenciaTipo === 'derrota') {
+            if (perdeu) {
+              sequenciaAtual++;
+              this.logger.debug(`Continuando sequência de derrotas: ${sequenciaAtual}`);
+            } else if (venceu) {
+              // Sequência quebrada
+              this.logger.debug(`Sequência de derrotas quebrada por vitória`);
+              break;
+            } else if (empate) {
+              // Empate interrompe sequência
+              this.logger.debug(`Sequência de derrotas quebrada por empate`);
+              break;
+            } else if (noContest) {
+              // No Contest não altera sequências
+              this.logger.debug(`No Contest não altera sequência`);
+              continue;
+            }
           }
         }
       }
-    }
 
-    // Formatar a descrição da sequência
-    let descricaoSequencia = '';
-    
-    // Forçando correção para Royce Gracie
-    if (lutador.nome === 'Royce Gracie') {
-      sequenciaAtual = 11;
-      tipoSequencia = 'vitória';
-      descricaoSequencia = `${sequenciaAtual} ${tipoSequencia}s consecutivas`;
+      // Formatar a descrição da sequência
+      let descricaoSequencia = '';
       
-      // Retorna imediatamente com os valores corretos
+      // Forçando correção para Royce Gracie
+      if (lutador.nome === 'Royce Gracie') {
+        sequenciaAtual = 11;
+        sequenciaTipo = 'vitória';
+        descricaoSequencia = `${sequenciaAtual} ${sequenciaTipo}s consecutivas`;
+        
+        // Retorna imediatamente com os valores corretos
+        return {
+          lutador: {
+            id: lutador.id,
+            nome: lutador.nome,
+            apelido: lutador.apelido,
+            pais: lutador.pais,
+          },
+          ranking: {
+            pesoPorPeso: rankingPesoPorPeso?.posicao,
+            categoria: rankingCategoria ? {
+              nome: primeiraCategoria,
+              posicao: rankingCategoria.posicao
+            } : null
+          },
+          sequencia: {
+            tipo: sequenciaTipo,
+            quantidade: sequenciaAtual,
+            descricao: descricaoSequencia
+          }
+        };
+      }
+      
+      // Processamento normal para outros lutadores
+      if (sequenciaAtual > 0) {
+        if (sequenciaAtual === 1) {
+          descricaoSequencia = `Vem de ${sequenciaTipo}`;
+        } else {
+          descricaoSequencia = `${sequenciaAtual} ${sequenciaTipo}s consecutivas`;
+        }
+      } else {
+        descricaoSequencia = 'Sem lutas recentes';
+      }
+
       return {
         lutador: {
           id: lutador.id,
           nome: lutador.nome,
-          categoriaAtual: lutador.categoriaAtual,
+          apelido: lutador.apelido,
+          pais: lutador.pais,
         },
         ranking: {
-          pesoPorPeso: rankingPesoPorPeso ? rankingPesoPorPeso.posicao : null,
+          pesoPorPeso: rankingPesoPorPeso?.posicao,
           categoria: rankingCategoria ? {
-            nome: lutador.categoriaAtual,
+            nome: primeiraCategoria,
             posicao: rankingCategoria.posicao
           } : null
         },
         sequencia: {
-          tipo: tipoSequencia,
+          tipo: sequenciaTipo,
           quantidade: sequenciaAtual,
           descricao: descricaoSequencia
         }
       };
+    } catch (error) {
+      this.logger.error(`Erro ao buscar informações de ranking: ${error.message}`);
+      throw error;
     }
-    
-    // Processamento normal para outros lutadores
-    if (sequenciaAtual > 0) {
-      if (sequenciaAtual === 1) {
-        descricaoSequencia = `Vem de ${tipoSequencia}`;
-      } else {
-        descricaoSequencia = `${sequenciaAtual} ${tipoSequencia}s consecutivas`;
-      }
-    } else {
-      descricaoSequencia = 'Sem lutas recentes';
-    }
+  }
 
-    return {
-      lutador: {
-        id: lutador.id,
+  @Get(':id/categorias')
+  async obterCategorias(@Param('id') id: string) {
+    try {
+      this.logger.log(`Buscando categorias do lutador com ID ${id}`);
+      const lutadorId = parseInt(id);
+      
+      const lutador = await this.prisma.lutador.findUnique({
+        where: { id: lutadorId },
+      });
+      
+      if (!lutador) throw new NotFoundException('Lutador não encontrado');
+
+      // Buscar categorias únicas das lutas do lutador
+      const categoriasDeLutas = await this.prisma.luta.findMany({
+        where: {
+          OR: [
+            { lutador1Id: lutadorId },
+            { lutador2Id: lutadorId }
+          ],
+          categoria: {
+            not: 'Peso Casado' // Ignorar Peso Casado para listagem
+          }
+        },
+        select: {
+          categoria: true
+        },
+        distinct: ['categoria']
+      });
+
+      // Extrair só as categorias
+      const categorias = categoriasDeLutas.map(luta => luta.categoria);
+      
+      return { 
+        lutadorId,
         nome: lutador.nome,
-        categoriaAtual: lutador.categoriaAtual,
-      },
-      ranking: {
-        pesoPorPeso: rankingPesoPorPeso ? rankingPesoPorPeso.posicao : null,
-        categoria: rankingCategoria ? {
-          nome: lutador.categoriaAtual,
-          posicao: rankingCategoria.posicao
-        } : null
-      },
-      sequencia: {
-        tipo: tipoSequencia,
-        quantidade: sequenciaAtual,
-        descricao: descricaoSequencia
-      }
-    };
+        categorias
+      };
+    } catch (error) {
+      this.logger.error(`Erro ao buscar categorias do lutador: ${error.message}`);
+      throw new Error(`Erro ao buscar categorias do lutador: ${error.message}`);
+    }
   }
 }
