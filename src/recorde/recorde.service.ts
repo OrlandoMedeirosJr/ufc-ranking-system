@@ -300,8 +300,37 @@ export class RecordeService {
           }
         });
       }
+
+      // Evento com maior pay-per-view
+      const eventoMaiorPayPerView = await this.prisma.evento.findFirst({
+        where: { 
+          finalizado: true,
+          payPerView: { not: null }
+        },
+        orderBy: { payPerView: 'desc' },
+        select: { id: true, nome: true, data: true, payPerView: true }
+      });
+
+      this.logger.log(`Evento com maior Pay-Per-View: ${JSON.stringify(eventoMaiorPayPerView)}`);
+
+      if (eventoMaiorPayPerView && eventoMaiorPayPerView.payPerView) {
+        this.logger.log(`Adicionando recorde de maior Pay-Per-View: ${eventoMaiorPayPerView.nome} com ${eventoMaiorPayPerView.payPerView} compras`);
+        recordes.push({
+          tipo: 'Maior pay-per-view',
+          lutador: undefined,
+          valor: eventoMaiorPayPerView.payPerView,
+          evento: {
+            id: eventoMaiorPayPerView.id,
+            nome: eventoMaiorPayPerView.nome,
+            data: eventoMaiorPayPerView.data
+          }
+        });
+      } else {
+        this.logger.error('Não foi possível encontrar evento com maior Pay-Per-View');
+      }
     } catch (error) {
       this.logger.error(`Erro ao calcular recordes de eventos: ${error.message}`);
+      this.logger.error(error.stack);
     }
 
     return recordes;
