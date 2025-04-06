@@ -1,0 +1,89 @@
+[2J[3J[H[[90m9:41:17 AM[0m] Starting compilation in watch mode...
+
+[[90m9:41:19 AM[0m] Found 0 errors. Watching for file changes.
+
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[Bootstrap] [39m[32mIniciando a aplicação...[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[Bootstrap] [39m[32mDiretório atual: /Users/orlando/Documents/ufc-ranking-system[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[Bootstrap] [39m[32mVariáveis de ambiente: DATABASE_URL=definido, NODE_ENV=undefined[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m[38;5;3m +1ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPrismaModule dependencies initialized[39m[38;5;3m +13ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mMulterModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDashboardModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mRecordeModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mRankingModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mLutadorModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mBackupModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mLutaModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEventoModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[Bootstrap] [39m[32mConfigurando CORS...[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[Bootstrap] [39m[32mTentando conectar ao banco de dados...[39m
+prisma:info Starting a postgresql pool with 17 connections.
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[PrismaService] [39m[32mConfigurando hooks de desligamento...[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[PrismaService] [39m[32mHooks de desligamento configurados com sucesso[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[Bootstrap] [39m[32mConexão com o banco de dados estabelecida com sucesso[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[Bootstrap] [39m[32mIniciando servidor na porta 3334 no host 0.0.0.0...[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAppController {/}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/system-info, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/lutadores-list, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/all-endpoints, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/health, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/health-db, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mRankingController {/ranking}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/ranking/atualizar, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/ranking/:categoria, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mEventoController {/eventos}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/eventos, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/eventos/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/eventos, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/eventos/lutadores, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/eventos/:id, PUT} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/eventos/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/eventos/:id/finalizar, PUT} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/eventos/sistema/limpar-banco, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/eventos/:id/lutas, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mRecordeController {/recordes}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/recordes, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mLutaController {/lutas}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/lutas, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/lutas/:id, PUT} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/lutas/:id/editar, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/lutas/count, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/lutas/categorias/contagem, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/lutas, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/lutas/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mLutadorController {/lutadores}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/lutadores, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/lutadores, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/lutadores/:id/estatisticas, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/lutadores/:id/estatisticas/:categoria, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/lutadores/:nome/info-ranking, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/lutadores/:id/categorias, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mBackupController {/backup}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/backup, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/backup/list, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/backup/download/:filename, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/backup/exportar, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/backup/importar, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mDashboardController {/dashboard}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/dashboard/estatisticas, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[PrismaService] [39m[32mInicializando conexão com o Prisma...[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[PrismaService] [39m[32mTentando conectar ao banco de dados com URL: postgresql://localhost:5432/ufcdb[39m
+prisma:info Starting a postgresql pool with 17 connections.
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[PrismaService] [39m[32mConexão com o banco de dados estabelecida com sucesso via Prisma[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[PrismaService] [39m[32mInicializando conexão com o Prisma...[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[PrismaService] [39m[32mTentando conectar ao banco de dados com URL: postgresql://localhost:5432/ufcdb[39m
+prisma:info Starting a postgresql pool with 17 connections.
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[PrismaService] [39m[32mConexão com o banco de dados estabelecida com sucesso via Prisma[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[PrismaService] [39m[32mInicializando conexão com o Prisma...[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[PrismaService] [39m[32mTentando conectar ao banco de dados com URL: postgresql://localhost:5432/ufcdb[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[PrismaService] [39m[32mConexão com o banco de dados estabelecida com sucesso via Prisma[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +1ms[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[Bootstrap] [39m[32mAplicação iniciada na porta 3334[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:19 AM [32m    LOG[39m [38;5;3m[Bootstrap] [39m[32mSwagger disponível em http://localhost:3334/api[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:20 AM [32m    LOG[39m [38;5;3m[RecordeService] [39m[32mCalculando lista atual de recordes[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:20 AM [32m    LOG[39m [38;5;3m[RecordeService] [39m[32mEvento com maior Pay-Per-View: {"id":45,"nome":"FC 3: The American Dream","data":"1994-09-09T12:00:00.000Z","payPerView":320000}[39m
+[32m[Nest] 23631  - [39m04/06/2025, 9:41:20 AM [32m    LOG[39m [38;5;3m[RecordeService] [39m[32mAdicionando recorde de maior Pay-Per-View: FC 3: The American Dream com 320000 compras[39m
