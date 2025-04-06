@@ -236,25 +236,6 @@ export class LutaController {
     }
   }
   
-  @Get(':id')
-  async obterLuta(@Param('id') id: string) {
-    const luta = await this.prisma.luta.findUnique({
-      where: { id: Number(id) },
-      include: {
-        lutador1: true,
-        lutador2: true,
-        vencedor: true,
-        evento: true
-      }
-    });
-    
-    if (!luta) {
-      return { error: 'Luta não encontrada', statusCode: 404 };
-    }
-    
-    return luta;
-  }
-
   @Get('count')
   async contarTodasLutas() {
     try {
@@ -293,5 +274,43 @@ export class LutaController {
       this.logger.error(`Erro ao contar lutas por categoria: ${error.message}`);
       throw new Error(`Erro ao contar lutas por categoria: ${error.message}`);
     }
+  }
+
+  @Get()
+  async listarLutas() {
+    try {
+      this.logger.log('Listando todas as lutas');
+      const lutas = await this.prisma.luta.findMany({
+        include: {
+          lutador1: true,
+          lutador2: true,
+          vencedor: true,
+          evento: true
+        }
+      });
+      return lutas;
+    } catch (error) {
+      this.logger.error(`Erro ao listar lutas: ${error.message}`);
+      throw new Error(`Erro ao listar lutas: ${error.message}`);
+    }
+  }
+
+  @Get(':id')
+  async obterLuta(@Param('id') id: string) {
+    const luta = await this.prisma.luta.findUnique({
+      where: { id: Number(id) },
+      include: {
+        lutador1: true,
+        lutador2: true,
+        vencedor: true,
+        evento: true
+      }
+    });
+    
+    if (!luta) {
+      return { error: 'Luta não encontrada', statusCode: 404 };
+    }
+    
+    return luta;
   }
 }

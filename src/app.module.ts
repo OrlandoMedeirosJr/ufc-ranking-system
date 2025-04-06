@@ -8,6 +8,7 @@ import { RecordeModule } from './recorde/recorde.module';
 import { LutadorModule } from './lutador/lutador.module';
 import { BackupModule } from './backup/backup.module';
 import { ConfigModule } from '@nestjs/config';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { ConfigModule } from '@nestjs/config';
     RecordeModule,
     LutadorModule,
     BackupModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],
