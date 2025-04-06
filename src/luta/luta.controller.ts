@@ -255,6 +255,19 @@ export class LutaController {
     return luta;
   }
 
+  @Get('count')
+  async contarTodasLutas() {
+    try {
+      this.logger.log('Contando total de lutas');
+      const count = await this.prisma.luta.count();
+      this.logger.log(`Total de lutas encontradas: ${count}`);
+      return { count };
+    } catch (error) {
+      this.logger.error(`Erro ao contar total de lutas: ${error.message}`);
+      throw new Error(`Erro ao contar total de lutas: ${error.message}`);
+    }
+  }
+
   @Get('categorias/contagem')
   async contarLutasPorCategoria() {
     try {
