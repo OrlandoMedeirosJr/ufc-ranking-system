@@ -1,6 +1,13 @@
 import { Controller, Get, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+
+interface DashboardStats {
+  totalLutadores: number;
+  totalEventos: number;
+  totalLutas: number;
+  totalCategorias: number;
+}
 
 @ApiTags('dashboard')
 @Controller('dashboard')
@@ -10,24 +17,25 @@ export class DashboardController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Get('estatisticas')
-  async obterEstatisticas() {
+  @ApiOperation({ summary: 'Obter estatísticas gerais para o dashboard' })
+  @ApiResponse({ status: 200, description: 'Estatísticas obtidas com sucesso' })
+  async obterEstatisticas(): Promise<DashboardStats> {
     try {
       this.logger.log('Obtendo estatísticas para o dashboard');
       
-      // Buscar contagem de lutadores
-      const totalLutadores = await this.prisma.lutador.count();
+      // Buscar as estatísticas em paralelo para melhor performance
+      const [totalLutadores, totalEventos, totalLutas, categoriasUnicas] = await Promise.all([
+        this.prisma.lutador.count(),
+        this.prisma.evento.count(),
+        this.prisma.luta.count(),
+        this.prisma.ranking.groupBy({
+          by: ['categoria'],
+        })
+      ]);
       
-      // Buscar contagem de eventos
-      const totalEventos = await this.prisma.evento.count();
-      
-      // Buscar contagem de lutas
-      const totalLutas = await this.prisma.luta.count();
-      
-      // Buscar categorias ativas
-      const categoriasUnicas = await this.prisma.ranking.groupBy({
-        by: ['categoria'],
-      });
       const totalCategorias = categoriasUnicas.length;
+      
+      this.logger.log(`Estatísticas obtidas: ${totalLutadores} lutadores, ${totalEventos} eventos, ${totalLutas} lutas, ${totalCategorias} categorias`);
       
       // Retornar todos os dados juntos
       return {
@@ -37,8 +45,8 @@ export class DashboardController {
         totalCategorias
       };
     } catch (error) {
-      this.logger.error(`Erro ao obter estatísticas do dashboard: ${error.message}`);
-      throw new Error(`Erro ao obter estatísticas do dashboard: ${error.message}`);
+      this.logger.error(`Erro ao obter estatísticas do dashboard: ${error.message}`, error.stack);
+      throw error;
     }
   }
 } 
