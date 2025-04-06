@@ -1,3 +1,0 @@
-[33m7dfc1e2[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m fix: atualiza script de railway para incluir migrações
-[33mcdc3112[m fix: corrige configuração de deploy para Railway
-[33m6b96cbe[m[33m ([m[1;31morigin/main[m[33m)[m Configurar API e CORS para comunicação entre frontend e backend

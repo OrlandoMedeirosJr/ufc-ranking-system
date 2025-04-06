@@ -1,13 +1,41 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { PontuacaoService } from './pontuacao.service';
+import { DesempateService } from './desempate.service';
 
+/**
+ * Interface para representar o resultado da pontuação de um lutador
+ */
+interface ResultadoPontuacao {
+  pontos: number;
+  vitoriasTitulo: number;
+  vitoriasPrimeiroRound: number;
+  vitoriasSegundoRound: number;
+  vitoriasTerceiroRound: number;
+  bonusTotal: number;
+  derrotas: number;
+}
+
+/**
+ * Serviço responsável pelo cálculo e manutenção dos rankings de lutadores
+ */
 @Injectable()
 export class RankingService {
   private readonly logger = new Logger(RankingService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly pontuacaoService: PontuacaoService,
+    private readonly desempateService: DesempateService,
+  ) {}
 
-  async calcularPontuacaoLutador(lutadorId: number) {
+  /**
+   * Calcula a pontuação total de um lutador com base em todas as suas lutas
+   * @param lutadorId - ID do lutador
+   * @returns Objeto com pontuação e estatísticas do lutador
+   */
+  async calcularPontuacaoLutador(lutadorId: number): Promise<ResultadoPontuacao> {
+    // Buscar todas as lutas do lutador
     const lutas = await this.prisma.luta.findMany({
       where: {
         OR: [{ lutador1Id: lutadorId }, { lutador2Id: lutadorId }],
@@ -28,97 +56,54 @@ export class RankingService {
     // Verificar se é Royce Gracie (ID 89) - correção específica
     const isRoyceGracie = lutadorId === 89;
 
+    // Processar cada luta do lutador
     for (const luta of lutas) {
-      const venceu = luta.vencedorId === lutadorId;
-      const perdeu = luta.vencedorId && luta.vencedorId !== lutadorId;
-      const empate = !luta.vencedorId;
-
+      // Pular lutas sem resultado (no contest)
       if (luta.noContest) continue;
 
-      const metodo = luta.metodoVitoria?.toLowerCase() ?? '';
-      const round = luta.round ?? 0;
-      const isTitulo = luta.disputaTitulo;
+      // Calcular pontuação para a luta atual
+      const pontuacaoLuta = this.pontuacaoService.calcularPontuacao({
+        id: luta.id,
+        vencedorId: luta.vencedorId,
+        lutador1Id: luta.lutador1Id,
+        lutador2Id: luta.lutador2Id,
+        metodoVitoria: luta.metodoVitoria,
+        round: luta.round,
+        disputaTitulo: luta.disputaTitulo,
+        noContest: luta.noContest,
+        bonus: luta.bonus
+      });
 
-      if (venceu) {
-        pontos += 3;
+      // Identificar qual é o lutador atual (lutador1 ou lutador2)
+      const ehLutador1 = luta.lutador1Id === lutadorId;
+      const dadosLutador = ehLutador1 ? pontuacaoLuta.lutador1 : pontuacaoLuta.lutador2;
 
-        if (metodo === 'nocaute' || metodo === 'finalização') {
-          pontos += 6 - round;
-          if (round === 1) vitoriasPrimeiroRound++;
-          if (round === 2) vitoriasSegundoRound++;
-          if (round === 3) vitoriasTerceiroRound++;
-        }
+      // Somar pontos desta luta
+      pontos += dadosLutador.pontos;
+      
+      // Atualizar estatísticas para desempate
+      bonusTotal += dadosLutador.bonusCount;
+      vitoriasPrimeiroRound += dadosLutador.vitoriasPrimeiroRound;
+      vitoriasSegundoRound += dadosLutador.vitoriasSegundoRound;
+      vitoriasTerceiroRound += dadosLutador.vitoriasTerceiroRound;
+      vitoriasTitulo += dadosLutador.vitoriasTitulo;
 
-        if (metodo.includes('decisão unânime')) pontos += 2;
-        else if (metodo.includes('decisão dividida')) pontos += 1;
-        else if (metodo.includes('desclassificação')) pontos += 1;
-
-        if (isTitulo) {
-          pontos += 3;
-          vitoriasTitulo++;
-        }
-
+      // Atualizar sequências de vitórias e derrotas
+      if (dadosLutador.vitoria) {
         streakVitorias++;
         streakDerrotas = 0;
-      } else if (perdeu) {
-        if (isTitulo) {
-          pontos -= 2;
-        } else {
-          if (metodo === 'nocaute') pontos -= 5;
-          else if (metodo === 'finalização') pontos -= 5;
-          else if (metodo.includes('decisão unânime')) pontos -= 3;
-          else if (metodo.includes('decisão dividida')) pontos -= 2;
-          else if (metodo.includes('desclassificação')) pontos -= 2;
-        }
-
+      } else if (dadosLutador.derrota) {
         derrotas++;
         streakDerrotas++;
         streakVitorias = 0;
-      } else if (empate) {
-        pontos += 1;
+      } else {
+        // Caso de empate
         streakVitorias = 0;
         streakDerrotas = 0;
       }
 
-      // Processar bônus
-      if (luta.bonus) {
-        // Registrar um log para debug
-        this.logger.debug(`Processando bônus para lutador ${lutadorId} na luta ${luta.id}: ${luta.bonus}`);
-        
-        // Tratar múltiplos bônus separados por vírgula
-        const bonuses = typeof luta.bonus === 'string' ? 
-                        luta.bonus.split(',').map(b => b.trim()) : 
-                        [luta.bonus];
-        
-        this.logger.debug(`Bônus processados: ${JSON.stringify(bonuses)}`);
-                
-        for (const bonus of bonuses) {
-          if (bonus === 'Performance da Noite') {
-            if (venceu) {
-              pontos += 1;
-              bonusTotal++;
-              this.logger.debug(`Adicionado bônus Performance da Noite: +1 ponto, total bonus: ${bonusTotal}`);
-            }
-          }
-          
-          if (bonus === 'Luta da Noite') {
-            pontos += 1;
-            bonusTotal++;
-            this.logger.debug(`Adicionado bônus Luta da Noite: +1 ponto, total bonus: ${bonusTotal}`);
-          }
-        }
-      }
-
-      // Aplicar bônus de sequência de vitórias
-      if (streakVitorias === 2) pontos += 1;
-      else if (streakVitorias === 3) pontos += 2;
-      else if (streakVitorias === 4) pontos += 3;
-      else if (streakVitorias >= 5) pontos += 4;
-
-      if (streakDerrotas === 2) pontos -= 1;
-      else if (streakDerrotas === 3) pontos -= 2;
-      else if (streakDerrotas === 4) pontos -= 3;
-      else if (streakDerrotas >= 5) pontos -= 4;
+      // Aplicar bônus/penalidades por sequência de vitórias/derrotas
+      pontos += this.pontuacaoService.calcularBonusSequencia(streakVitorias, streakDerrotas);
     }
 
     // Correção específica para Royce Gracie
@@ -139,6 +124,10 @@ export class RankingService {
     };
   }
 
+  /**
+   * Atualiza os rankings de todas as categorias
+   * @returns Resultado da operação
+   */
   async atualizarTodosOsRankings() {
     try {
       this.logger.log('Iniciando atualização de todos os rankings');
@@ -171,6 +160,7 @@ export class RankingService {
         rankingMap[categoria] = [];
       });
 
+      // Calcular pontuação para cada lutador
       for (const lutador of lutadores) {
         this.logger.debug(`Calculando pontuação para lutador: ${lutador.nome} (ID: ${lutador.id})`);
         const resultado = await this.calcularPontuacaoLutador(lutador.id);
@@ -201,11 +191,13 @@ export class RankingService {
         });
       }
 
+      // Remover entradas antigas do ranking
       this.logger.log(`Removendo entradas antigas do ranking antes da atualização`);
       await this.prisma.ranking.deleteMany();
 
       let totalEntradasCriadas = 0;
       
+      // Processar e salvar o ranking para cada categoria
       for (const [categoria, lutadores] of Object.entries(rankingMap)) {
         if (lutadores.length === 0) {
           this.logger.debug(`Categoria ${categoria} não possui lutadores`);
@@ -214,21 +206,10 @@ export class RankingService {
         
         this.logger.log(`Processando categoria ${categoria} com ${lutadores.length} lutadores`);
         
-        const ordenado = lutadores.sort((a, b) => {
-          if (b.pontos !== a.pontos) return b.pontos - a.pontos;
-          if (a.derrotas !== b.derrotas) return a.derrotas - b.derrotas;
-          if (b.vitoriasTitulo !== a.vitoriasTitulo)
-            return b.vitoriasTitulo - a.vitoriasTitulo;
-          if (b.vitoriasPrimeiroRound !== a.vitoriasPrimeiroRound)
-            return b.vitoriasPrimeiroRound - a.vitoriasPrimeiroRound;
-          if (b.vitoriasSegundoRound !== a.vitoriasSegundoRound)
-            return b.vitoriasSegundoRound - a.vitoriasSegundoRound;
-          if (b.vitoriasTerceiroRound !== a.vitoriasTerceiroRound)
-            return b.vitoriasTerceiroRound - a.vitoriasTerceiroRound;
-          if (b.bonusTotal !== a.bonusTotal) return b.bonusTotal - a.bonusTotal;
-          return 0;
-        });
+        // Ordenar lutadores com critérios de desempate
+        const ordenado = this.desempateService.ordenarRankingComDesempate(lutadores);
 
+        // Criar entradas no ranking para cada lutador
         for (let i = 0; i < ordenado.length; i++) {
           const entry = ordenado[i];
           const posicao = i + 1;
@@ -241,26 +222,17 @@ export class RankingService {
             },
           });
 
-          let cor = '';
-          if (posicao === 1) {
-            if (numLutas >= 10) {
-              cor = 'dourado-escuro';
-            } else {
-              cor = 'dourado-claro';
-            }
-          }
-          else if (categoria === 'Peso por Peso' && posicao >= 2 && posicao <= 5)
-            cor = 'dourado-claro';
-          else if (categoria === 'Peso por Peso' && posicao >= 6 && posicao <= 15)
-            cor = 'azul-escuro';
-          else if (posicao >= 2 && posicao <= 5) cor = 'azul-escuro';
-          else if (posicao >= 6 && posicao <= 15) cor = 'azul-claro';
+          // Determinar a cor de fundo com base na posição e categoria
+          const cor = this.desempateService.determinarCorFundo(posicao, numLutas, categoria);
 
-          const anterior = rankingAnterior.find(
-            (r) => r.lutadorId === entry.lutadorId && r.categoria === categoria,
-          );
-          const variacao = anterior ? anterior.posicao - posicao : 0;
+          // Verificar a posição anterior para calcular variação
+          const posicaoAnterior = rankingAnterior.find(
+            r => r.lutadorId === entry.lutadorId && r.categoria === categoria
+          )?.posicao;
 
+          const variacao = posicaoAnterior ? posicaoAnterior - posicao : 0;
+
+          // Criar a entrada no ranking
           await this.prisma.ranking.create({
             data: {
               lutadorId: entry.lutadorId,
@@ -271,20 +243,27 @@ export class RankingService {
               variacao,
             },
           });
-          
+
           totalEntradasCriadas++;
-          
-          this.logger.debug(`Criada entrada de ranking para ${entry.nome} na categoria ${categoria}: posição ${posicao}, pontos ${entry.pontos}`);
         }
       }
 
-      this.logger.log(`✅ Ranking atualizado com sucesso. ${totalEntradasCriadas} entradas criadas no ranking.`);
+      this.logger.log(`Ranking atualizado com sucesso. Total de ${totalEntradasCriadas} entradas criadas.`);
+      return { success: true, totalEntradas: totalEntradasCriadas };
     } catch (error) {
-      this.logger.error(`❌ Erro ao atualizar ranking: ${error.message}`, error.stack);
-      throw new Error(`Falha ao atualizar o ranking: ${error.message}`);
+      this.logger.error(`Erro ao atualizar rankings: ${error.message}`, error.stack);
+      return { 
+        success: false, 
+        error: error.message 
+      };
     }
   }
 
+  /**
+   * Obtém o ranking de uma categoria específica
+   * @param categoria - Nome da categoria
+   * @returns Lista de lutadores ordenados por posição
+   */
   async getRankingPorCategoria(categoria: string) {
     return this.prisma.ranking.findMany({
       where: { categoria },

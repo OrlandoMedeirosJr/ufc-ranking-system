@@ -16,6 +16,7 @@ import { RankingService } from '../ranking/ranking.service';
 import { ApiOperation } from '@nestjs/swagger';
 import { Prisma } from '@prisma/client';
 import { EditarLutaDto } from './dto/editar-luta.dto';
+import { CreateLutaDto } from './dto/create-luta.dto';
 import { LutaService } from './luta.service';
 
 @Controller('lutas')
@@ -30,14 +31,14 @@ export class LutaController {
 
   @Post()
   @UsePipes(new ValidationPipe({ transform: true }))
-  async criarLuta(@Body() data: any) {
+  async criarLuta(@Body() data: CreateLutaDto) {
     try {
       // Processar múltiplos bônus
       if (data.bonus && Array.isArray(data.bonus)) {
         data.bonus = data.bonus.join(',');
       }
       
-      const luta = await this.prisma.luta.create({ data });
+      const luta = await this.prisma.luta.create({ data: data as any });
       
       this.logger.log(`Luta criada com sucesso: ID ${luta.id}`);
       return { mensagem: 'Luta criada com sucesso', luta };
@@ -252,5 +253,32 @@ export class LutaController {
     }
     
     return luta;
+  }
+
+  @Get('categorias/contagem')
+  async contarLutasPorCategoria() {
+    try {
+      this.logger.log('Contando lutas por categoria');
+      const categorias = [
+        'Peso Mosca', 'Peso Galo', 'Peso Pena', 'Peso Leve', 
+        'Peso Meio-Médio', 'Peso Médio', 'Peso Meio-Pesado', 'Peso Pesado',
+        'Peso Palha Feminino', 'Peso Mosca Feminino', 'Peso Galo Feminino', 'Peso Pena Feminino'
+      ];
+      
+      const resultado = [];
+      
+      for (const categoria of categorias) {
+        const count = await this.prisma.luta.count({
+          where: { categoria }
+        });
+        
+        resultado.push({ categoria, count });
+      }
+      
+      return resultado;
+    } catch (error) {
+      this.logger.error(`Erro ao contar lutas por categoria: ${error.message}`);
+      throw new Error(`Erro ao contar lutas por categoria: ${error.message}`);
+    }
   }
 }

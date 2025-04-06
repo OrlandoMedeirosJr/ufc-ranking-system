@@ -17,6 +17,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EventoService } from './evento.service';
 import { Prisma, Luta } from '@prisma/client';
 import { RankingService } from '../ranking/ranking.service';
+import { CreateEventoDto } from './dto/create-evento.dto';
 
 @Controller('eventos')
 export class EventoController {
@@ -158,16 +159,24 @@ export class EventoController {
 
   @Post()
   @UsePipes(new ValidationPipe({ transform: true }))
-  async criarEvento(@Body() data: any) {
+  async criarEvento(@Body() data: CreateEventoDto) {
     try {
       this.logger.log(`Iniciando criação de evento: ${JSON.stringify(data.nome)}`);
       
       // Extrair dados do evento e lutas
       const { lutas, ...eventoData } = data;
       
+      // Criar uma cópia dos dados para formatar adequadamente
+      const eventoDataFormatado: any = { ...eventoData };
+      
+      // Garantir que a data seja um objeto Date se for uma string
+      if (eventoDataFormatado.data && typeof eventoDataFormatado.data === 'string') {
+        eventoDataFormatado.data = new Date(eventoDataFormatado.data);
+      }
+      
       // Criar o evento primeiro
       const evento = await this.prisma.evento.create({ 
-        data: eventoData 
+        data: eventoDataFormatado 
       });
       
       this.logger.log(`Evento criado com ID: ${evento.id}`);

@@ -6,6 +6,7 @@ export interface RecordeInfo {
   lutador: string | undefined;
   valor: number;
   categoria?: string;
+  evento?: { id: number; nome: string; data?: Date; };
 }
 
 @Injectable()
@@ -243,6 +244,57 @@ export class RecordeService {
       maxPor('dec', 'Mais vitórias por decisão'),
       maxPor('bonus', 'Mais bônus da noite'),
     ]);
+
+    // Calcular eventos mais populares/lucrativos
+    try {
+      // Evento com maior público
+      const eventoMaiorPublico = await this.prisma.evento.findFirst({
+        where: { 
+          finalizado: true,
+          publicoTotal: { not: null }
+        },
+        orderBy: { publicoTotal: 'desc' },
+        select: { id: true, nome: true, data: true, publicoTotal: true }
+      });
+
+      if (eventoMaiorPublico && eventoMaiorPublico.publicoTotal) {
+        recordes.push({
+          tipo: 'Maior público',
+          lutador: undefined,
+          valor: eventoMaiorPublico.publicoTotal,
+          evento: {
+            id: eventoMaiorPublico.id,
+            nome: eventoMaiorPublico.nome,
+            data: eventoMaiorPublico.data
+          }
+        });
+      }
+
+      // Evento com maior arrecadação
+      const eventoMaiorArrecadacao = await this.prisma.evento.findFirst({
+        where: { 
+          finalizado: true,
+          arrecadacao: { not: null }
+        },
+        orderBy: { arrecadacao: 'desc' },
+        select: { id: true, nome: true, data: true, arrecadacao: true }
+      });
+
+      if (eventoMaiorArrecadacao && eventoMaiorArrecadacao.arrecadacao) {
+        recordes.push({
+          tipo: 'Maior arrecadação',
+          lutador: undefined,
+          valor: eventoMaiorArrecadacao.arrecadacao,
+          evento: {
+            id: eventoMaiorArrecadacao.id,
+            nome: eventoMaiorArrecadacao.nome,
+            data: eventoMaiorArrecadacao.data
+          }
+        });
+      }
+    } catch (error) {
+      this.logger.error(`Erro ao calcular recordes de eventos: ${error.message}`);
+    }
 
     return recordes;
   }

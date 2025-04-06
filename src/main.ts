@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { PrismaService } from './prisma/prisma.service';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
 
 // src/main.ts
 async function bootstrap() {
@@ -16,10 +17,12 @@ async function bootstrap() {
       logger: ['error', 'warn', 'log', 'debug', 'verbose'],
     });
     
-    // Configurar CORS para desenvolvimento
+    const configService = app.get(ConfigService);
+    
+    // Configurar CORS para permitir acesso do frontend
     logger.log('Configurando CORS...');
     app.enableCors({
-      origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003', 'http://localhost:3004'],
+      origin: configService.get<string>('FRONTEND_URL'),
       methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
       credentials: true,
     });
@@ -38,8 +41,8 @@ async function bootstrap() {
     
     // Configuração do Swagger
     const config = new DocumentBuilder()
-      .setTitle('UFC Ranking System API')
-      .setDescription('API para o sistema de ranking do UFC')
+      .setTitle('UFC Ranking API')
+      .setDescription('API do sistema de ranking de lutadores do UFC')
       .setVersion('1.0')
       .addTag('lutadores')
       .addTag('eventos')
@@ -64,7 +67,7 @@ async function bootstrap() {
     }
     
     // Configurar o encerramento limpo
-    const port = process.env.PORT || 3333;
+    const port = configService.get<number>('PORT', 3333);
     // Alterar host para 0.0.0.0 para permitir acesso externo na nuvem
     logger.log(`Iniciando servidor na porta ${port} no host 0.0.0.0...`);
     await app.listen(port, '0.0.0.0');

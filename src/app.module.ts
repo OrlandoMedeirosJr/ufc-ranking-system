@@ -7,9 +7,14 @@ import { LutaModule } from './luta/luta.module';
 import { RecordeModule } from './recorde/recorde.module';
 import { LutadorModule } from './lutador/lutador.module';
 import { BackupModule } from './backup/backup.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env',
+    }),
     RankingModule,
     EventoModule,
     LutaModule,

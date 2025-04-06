@@ -2,6 +2,7 @@ import { Controller, Get, Param, NotFoundException, Query, Logger, Post, Body, U
 import { PrismaService } from '../prisma/prisma.service';
 import { RankingService } from '../ranking/ranking.service';
 import { LutadorService } from './lutador.service';
+import { CreateLutadorDto } from './dto/create-lutador.dto';
 
 @Controller('lutadores')
 export class LutadorController {
@@ -32,7 +33,7 @@ export class LutadorController {
 
   @Post()
   @UsePipes(new ValidationPipe({ transform: true }))
-  async criar(@Body() data: any) {
+  async criar(@Body() data: CreateLutadorDto) {
     this.logger.log(`Criando lutador com dados: ${JSON.stringify(data)}`);
     try {
       const lutador = await this.prisma.lutador.create({
